@@ -1,0 +1,61 @@
+/* Design tokens (brief §5.1) */
+:root {
+  --green: #59c174;
+  --green-dark: #3e9a57;
+  --green-light: #e8f5ec;
+  --green-highlight-dark: #8fd6a3;
+  --green-highlight-light: #c3e8ce;
+  --green-pill: #e3f4e8;
+  --navy: #2c2e48;
+  --navy-dark: #17182a;
+  --ground: #fafafa;
+  --white: #ffffff;
+  --border: #d9dbe5;
+  --muted-bg: #eceef3;
+  --muted-text: #4a4d6b;
+
+  --font-ui: "Nunito", ui-rounded, "Trebuchet MS", sans-serif;
+  --font-pieces: "Checkmate", "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", serif;
+}
+
+/*
+ * OTL Checkmate is a chess diagram font: its letters draw board squares.
+ * unicode-range limits it to the 12 chess glyphs (U+2654–265F) so it can
+ * never be used for text.
+ */
+@font-face {
+  font-family: "Checkmate";
+  src:
+    url("/fonts/OTL_Checkmate.woff2") format("woff2"),
+    url("/fonts/OTL_Checkmate.ttf") format("truetype");
+  unicode-range: U+2654-265F;
+  font-display: block;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--ground);
+  color: var(--navy);
+  font-family: var(--font-ui);
+  font-size: 17px;
+  font-weight: 700;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+}

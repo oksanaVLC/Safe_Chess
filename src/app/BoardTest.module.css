@@ -1,0 +1,36 @@
+.screen {
+  min-height: 100dvh;
+  padding: 20px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.title {
+  margin: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.pill {
+  align-self: center;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--green-pill);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--green);
+}

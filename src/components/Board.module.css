@@ -1,0 +1,121 @@
+/* Board (brief §5.4): 44 px squares, shrinks to fit narrower phones. */
+.frame {
+  /* 352 px (44 px squares) on a 390 px phone; the frame may use 1 px of each gutter. */
+  --board: min(352px, calc(100vw - 38px));
+  align-self: center;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--navy);
+}
+
+.grid {
+  container-type: inline-size;
+  width: var(--board);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* 1cqw = 1/100 of the board, so one square = 12.5cqw (44 px at full size). */
+.square {
+  position: relative;
+  padding: 0;
+  border: none;
+  margin: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.square:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: -3px;
+}
+
+.dark {
+  background: var(--green);
+}
+
+.light {
+  background: var(--green-light);
+}
+
+.lastDark {
+  background: var(--green-highlight-dark);
+}
+
+.lastLight {
+  background: var(--green-highlight-light);
+}
+
+.selected {
+  box-shadow: inset 0 0 0 4px var(--navy);
+}
+
+.glyph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-pieces);
+  font-size: 10.2cqw; /* 36 px on a 44 px square */
+  line-height: 1;
+  pointer-events: none;
+}
+
+.whiteFill {
+  color: var(--white);
+}
+
+.navy {
+  color: var(--navy);
+}
+
+.dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4cqw; /* 14 px */
+  height: 4cqw;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(44, 46, 72, 0.4);
+  pointer-events: none;
+}
+
+.ring {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  border: 4px solid rgba(44, 46, 72, 0.4);
+  pointer-events: none;
+}
+
+.coord {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.dark .coord {
+  color: #f4fbf6;
+}
+
+.light .coord {
+  color: var(--green-dark);
+}
+
+.rank {
+  left: 3px;
+  top: 2px;
+}
+
+.file {
+  right: 3px;
+  bottom: 2px;
+}
