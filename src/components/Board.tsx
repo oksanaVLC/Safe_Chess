@@ -1,17 +1,9 @@
 "use client";
 
-import type { PieceSymbol, SquareView } from "@/game/GameController";
+import type { SquareView } from "@/game/GameController";
+import { useLanguage } from "@/i18n/language";
 import styles from "./Board.module.css";
 import { PieceGlyph } from "./PieceGlyph";
-
-const NAMES: Record<PieceSymbol, string> = {
-  k: "king",
-  q: "queen",
-  r: "rook",
-  b: "bishop",
-  n: "knight",
-  p: "pawn",
-};
 
 type BoardProps =
   | { squares: SquareView[]; onTap: (square: SquareView["square"]) => void; size?: "game" }
@@ -19,6 +11,7 @@ type BoardProps =
   | { squares: SquareView[]; onTap?: undefined; size: "mini"; label: string };
 
 export function Board(props: BoardProps) {
+  const { t } = useLanguage();
   const { squares, onTap } = props;
   const mini = props.size === "mini";
   return (
@@ -62,7 +55,7 @@ export function Board(props: BoardProps) {
             );
           }
           const label = sq.piece
-            ? `${sq.square}, ${sq.piece.color === "w" ? "white" : "black"} ${NAMES[sq.piece.type]}`
+            ? `${sq.square}, ${t.pieceOnSquare[sq.piece.color][sq.piece.type]}`
             : sq.square;
           return (
             <button

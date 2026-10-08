@@ -6,16 +6,9 @@ import {
   type Color,
   type PromotionPiece,
 } from "@/game/GameController";
+import { useLanguage } from "@/i18n/language";
 import { PieceGlyph } from "./PieceGlyph";
 import styles from "./PromotionPicker.module.css";
-
-// Placeholder English labels; translations come with the language step.
-const LABELS: Record<PromotionPiece, string> = {
-  q: "Queen",
-  r: "Rook",
-  b: "Bishop",
-  n: "Knight",
-};
 
 interface PromotionPickerProps {
   color: Color;
@@ -28,6 +21,7 @@ interface PromotionPickerProps {
  * board behind it is inert, focus stays inside and Escape cancels.
  */
 export function PromotionPicker({ color, onPick, onCancel }: PromotionPickerProps) {
+  const { t } = useLanguage();
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -47,7 +41,7 @@ export function PromotionPicker({ color, onPick, onCancel }: PromotionPickerProp
       }}
     >
       <h2 id="promotion-title" className={styles.title}>
-        Choose a piece
+        {t.choosePiece}
       </h2>
       <div className={styles.choices}>
         {PROMOTION_PIECES.map((piece, i) => (
@@ -61,12 +55,12 @@ export function PromotionPicker({ color, onPick, onCancel }: PromotionPickerProp
             <span className={styles.glyph}>
               <PieceGlyph piece={{ type: piece, color }} />
             </span>
-            {LABELS[piece]}
+            {t.pieceNames[piece]}
           </button>
         ))}
       </div>
       <button type="button" className={styles.cancel} onClick={onCancel}>
-        Cancel
+        {t.cancel}
       </button>
     </dialog>
   );

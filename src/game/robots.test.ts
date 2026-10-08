@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { STRINGS } from "@/i18n/strings";
 import { gameSubtitle, opponentsOf } from "./robots";
 
 describe("game opponents", () => {
@@ -10,10 +11,14 @@ describe("game opponents", () => {
   });
 
   it("describes one opponent", () => {
-    expect(gameSubtitle([3])).toBe("You vs Gizmo · Level 3");
+    expect(gameSubtitle(STRINGS.en, [3])).toBe("You vs Gizmo · Level 3");
+    expect(gameSubtitle(STRINGS.es, [1])).toBe("Tú contra Dormilón · Nivel 1");
+    expect(gameSubtitle(STRINGS.ru, [1])).toBe("Ты против Сони · Уровень 1");
   });
 
   it("describes a game where the level was changed", () => {
-    expect(gameSubtitle([1, 5])).toBe("You vs Snoozy, Titan · Levels 1, 5");
+    expect(gameSubtitle(STRINGS.en, [1, 5])).toBe("You vs Snoozy, Titan · Levels 1, 5");
+    expect(gameSubtitle(STRINGS.es, [1, 5])).toBe("Tú contra Dormilón, Titán · Niveles 1, 5");
+    expect(gameSubtitle(STRINGS.ru, [1, 5])).toBe("Ты против Сони, Титана · Уровни 1, 5");
   });
 });

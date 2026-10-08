@@ -1,23 +1,14 @@
 "use client";
 
-import type { Move, PieceSymbol } from "chess.js";
+import type { Move } from "chess.js";
 import { useEffect, useRef, useState } from "react";
 import { positionSquares } from "@/game/GameController";
 import { moveNumberOf, positionAt, toEntries, toRows, type MoveEntry } from "@/game/moveList";
+import { useLanguage } from "@/i18n/language";
 import { Board } from "./Board";
 import styles from "./GameMoves.module.css";
 import { BackIcon, FirstIcon, LastIcon, NextIcon, PreviousIcon } from "./icons";
 import { PieceGlyph } from "./PieceGlyph";
-
-// Placeholder English texts; translations come with the language step.
-const PIECE_NAMES: Record<PieceSymbol, string> = {
-  k: "king",
-  q: "queen",
-  r: "rook",
-  b: "bishop",
-  n: "knight",
-  p: "pawn",
-};
 
 interface GameMovesProps {
   history: Move[];
@@ -31,6 +22,7 @@ interface GameMovesProps {
  * at the selected move, and buttons to step through the game.
  */
 export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
+  const { t } = useLanguage();
   const entries = toEntries(history);
   const rows = toRows(entries);
   const total = entries.length;
@@ -54,21 +46,21 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
   const cell = (e: MoveEntry | undefined) => {
     if (!e) return <span />;
     const selected = e.ply === ply;
-    const color = e.color === "w" ? "White" : "Black";
-    const what = e.castles ? "castles" : `${PIECE_NAMES[e.piece]} ${e.to}`;
+    const color = e.color === "w" ? t.whiteCol : t.blackCol;
+    const what = e.castles ? t.castles : `${t.pieceNames[e.piece].toLowerCase()} ${e.to}`;
     return (
       <button
         type="button"
         ref={selected ? selectedCell : undefined}
         className={`${styles.cell} ${selected ? styles.selected : ""}`}
         aria-current={selected ? "true" : undefined}
-        aria-label={`Move ${moveNumberOf(e.ply)}, ${color}, ${what}`}
+        aria-label={`${t.move} ${moveNumberOf(e.ply)}, ${color}, ${what}`}
         onClick={() => go(e.ply)}
       >
         <span className={styles.glyph}>
           <PieceGlyph piece={{ type: e.castles ? "k" : e.piece, color: e.color }} />
         </span>
-        {e.castles ? "castles" : e.to}
+        {e.castles ? t.castles : e.to}
         {e.promotion && (
           <span className={styles.glyph}>
             <PieceGlyph piece={{ type: e.promotion, color: e.color }} />
@@ -80,12 +72,13 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
 
   return (
     <main className={styles.screen}>
+      <title>{`${t.gameMoves} — Safe Chess`}</title>
       <header className={styles.topBar}>
-        <button type="button" className={styles.back} aria-label="Back to the game" onClick={onBack}>
+        <button type="button" className={styles.back} aria-label={t.backToGame} onClick={onBack}>
           <BackIcon />
         </button>
         <div className={styles.titles}>
-          <h1 className={styles.title}>Game moves</h1>
+          <h1 className={styles.title}>{t.gameMoves}</h1>
           <span className={styles.subtitle}>{subtitle}</span>
         </div>
       </header>
@@ -93,14 +86,14 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
       <Board
         size="mini"
         squares={positionSquares(fen, lastMove)}
-        label={ply === 0 ? "Board at the start" : `Board after move ${moveNumber}`}
+        label={ply === 0 ? t.boardAtStart : t.boardAfterMove(moveNumber)}
       />
 
       <div className={styles.steps}>
         <button
           type="button"
           className={styles.end}
-          aria-label="First move"
+          aria-label={t.firstMove}
           disabled={ply === 0}
           onClick={() => go(0)}
         >
@@ -109,20 +102,22 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
         <button
           type="button"
           className={styles.step}
-          aria-label="Previous move"
+          aria-label={t.previousMove}
           disabled={ply === 0}
           onClick={() => go(ply - 1)}
         >
           <PreviousIcon />
         </button>
         <p className={styles.counter} aria-live="polite">
-          {ply === 0 ? "Start" : `Move ${moveNumber}`}
-          <span className={styles.of}>of {rows.length}</span>
+          {ply === 0 ? t.start : `${t.move} ${moveNumber}`}
+          <span className={styles.of}>
+            {t.of} {rows.length}
+          </span>
         </p>
         <button
           type="button"
           className={styles.step}
-          aria-label="Next move"
+          aria-label={t.nextMove}
           disabled={ply === total}
           onClick={() => go(ply + 1)}
         >
@@ -131,7 +126,7 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
         <button
           type="button"
           className={styles.end}
-          aria-label="Last move"
+          aria-label={t.lastMove}
           disabled={ply === total}
           onClick={() => go(total)}
         >
@@ -139,11 +134,11 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
         </button>
       </div>
 
-      <section className={styles.table} aria-label="Moves">
+      <section className={styles.table} aria-label={t.moves}>
         <div className={styles.head} aria-hidden="true">
           <span>#</span>
-          <span>White</span>
-          <span>Black</span>
+          <span>{t.whiteCol}</span>
+          <span>{t.blackCol}</span>
         </div>
         <ol ref={list} className={styles.rows}>
           {rows.map((row) => (

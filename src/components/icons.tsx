@@ -58,6 +58,24 @@ export function NewGameIcon({ size = 24 }: IconProps) {
   );
 }
 
+export function GlobeIcon({ size = 28 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M2.5 12h19" />
+      <path d="M12 2.5c2.6 2.6 4 6 4 9.5s-1.4 6.9-4 9.5c-2.6-2.6-4-6-4-9.5s1.4-6.9 4-9.5z" />
+    </svg>
+  );
+}
+
+export function CheckIcon({ size = 24 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2.8}>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
 export function FirstIcon({ size = 24 }: IconProps) {
   return (
     <svg {...base} width={size} height={size} strokeWidth={2.4}>

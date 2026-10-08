@@ -10,7 +10,8 @@ import { PromotionPicker } from "@/components/PromotionPicker";
 import type { Level } from "@/engine/ChessEngine";
 import { Robot } from "@/engine/Robot";
 import { GameController, type PromotionPiece, type Square } from "@/game/GameController";
-import { gameSubtitle, opponentsOf, ROBOTS } from "@/game/robots";
+import { gameSubtitle, opponentsOf } from "@/game/robots";
+import { useLanguage } from "@/i18n/language";
 import styles from "./RobotGame.module.css";
 
 const PLAYER = "w";
@@ -20,6 +21,7 @@ const MIN_THINK_MS = 600;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function RobotGame() {
+  const { t } = useLanguage();
   // The controller is mutable; `rerender` refreshes the view after a change.
   const [game] = useState(() => new GameController(undefined, PLAYER));
   const [, rerender] = useReducer((n: number) => n + 1, 0);
@@ -43,7 +45,6 @@ export function RobotGame() {
     return () => r.stop();
   }, []);
 
-  const robotName = ROBOTS[level].name;
 
   function letRobotMove() {
     if (game.isOver || game.turn === PLAYER || !robot.current) return;
@@ -100,22 +101,20 @@ export function RobotGame() {
     rerender();
   };
 
-  // Placeholder status texts; final wording and translations come later.
   const status = game.status;
-  let statusText = "Your turn — tap a piece";
+  let statusText = t.turnHint;
   let waiting = false;
   if (status.kind === "checkmate") {
     // The robot that delivered mate, even if the level was changed since.
     const winner = robotLevels[game.plyCount - 1] ?? level;
-    statusText =
-      status.winner === PLAYER ? "Checkmate — you win!" : `Checkmate — ${ROBOTS[winner].name} wins`;
+    statusText = status.winner === PLAYER ? t.win : t.loss(t.robots[winner].name);
   } else if (status.kind === "draw") {
-    statusText = "It's a draw";
+    statusText = t.draw;
   } else if (thinking) {
-    statusText = `${ROBOTS[thinking].name} is thinking…`;
+    statusText = t.thinking(t.robots[thinking].name);
     waiting = true;
   } else if (status.check) {
-    statusText = "Check! Your turn";
+    statusText = t.check;
   }
 
   const pending = game.pendingPromotion;
@@ -128,7 +127,7 @@ export function RobotGame() {
     return (
       <GameMoves
         history={game.history()}
-        subtitle={gameSubtitle(opponents.length > 0 ? opponents : [level])}
+        subtitle={gameSubtitle(t, opponents.length > 0 ? opponents : [level])}
         onBack={() => setShowMoves(false)}
       />
     );
@@ -136,11 +135,14 @@ export function RobotGame() {
 
   return (
     <main className={styles.screen}>
+      <title>{`${t.robot} — Safe Chess`}</title>
       <header className={styles.topBar}>
-        <Link href="/" className={styles.back} aria-label="Back to home">
+        <Link href="/" className={styles.back} aria-label={t.backHome}>
           <BackIcon />
         </Link>
-        <h1 className={styles.title}>You vs {robotName}</h1>
+        <h1 className={styles.title}>
+          {t.vs} {t.robots[level].vsName}
+        </h1>
       </header>
 
       <LevelToolbar level={level} onChange={setLevel} />
@@ -152,18 +154,18 @@ export function RobotGame() {
         {statusText}
       </p>
 
-      <nav className={styles.bottomBar} aria-label="Game">
+      <nav className={styles.bottomBar} aria-label={t.game}>
         <button type="button" className={styles.undo} onClick={onUndo} disabled={!game.canUndo}>
           <UndoIcon />
-          Undo
+          {t.undo}
         </button>
         <button type="button" className={styles.secondary} onClick={() => setShowMoves(true)}>
           <MovesIcon />
-          Moves
+          {t.moves}
         </button>
         <button type="button" className={styles.secondary} onClick={onNew}>
           <NewGameIcon />
-          New
+          {t.new}
         </button>
       </nav>
 
