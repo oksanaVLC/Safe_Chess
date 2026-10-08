@@ -141,7 +141,7 @@
 }
 
 .row {
-  min-height: 48px;
+  min-height: 64px;
   padding-top: 4px;
   padding-bottom: 4px;
   border-bottom: 1px solid #eef0f4;
@@ -153,8 +153,9 @@
   color: var(--muted-text);
 }
 
+/* Tap target at least 56 px tall (brief §1). */
 .cell {
-  height: 40px;
+  height: 56px;
   padding: 0 8px;
   border: none;
   border-radius: 10px;

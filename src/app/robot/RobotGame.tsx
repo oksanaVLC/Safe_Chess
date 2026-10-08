@@ -10,7 +10,7 @@ import { PromotionPicker } from "@/components/PromotionPicker";
 import type { Level } from "@/engine/ChessEngine";
 import { Robot } from "@/engine/Robot";
 import { GameController, type PromotionPiece, type Square } from "@/game/GameController";
-import { ROBOTS } from "@/game/robots";
+import { gameSubtitle, opponentsOf, ROBOTS } from "@/game/robots";
 import styles from "./RobotGame.module.css";
 
 const PLAYER = "w";
@@ -24,7 +24,14 @@ export function RobotGame() {
   const [game] = useState(() => new GameController(undefined, PLAYER));
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [level, setLevel] = useState<Level>(3);
-  const [thinking, setThinking] = useState(false);
+  /** Level of the robot that is searching, or null. */
+  const [thinking, setThinking] = useState<Level | null>(null);
+  /**
+   * Which robot level played each half-move (index = ply - 1; undefined for
+   * the person's moves). Kept with the game, so the Game moves screen
+   * describes this game even if the level toolbar changes later.
+   */
+  const [robotLevels, setRobotLevels] = useState<(Level | undefined)[]>([]);
   const [showMoves, setShowMoves] = useState(false);
   const robot = useRef<Robot | null>(null);
   /** Bumped to discard a robot reply that is no longer wanted. */
@@ -41,23 +48,29 @@ export function RobotGame() {
   function letRobotMove() {
     if (game.isOver || game.turn === PLAYER || !robot.current) return;
     const id = ++searchId.current;
-    setThinking(true);
-    Promise.all([robot.current.getBestMove(game.fen, level), wait(MIN_THINK_MS)])
+    const searchLevel = level;
+    setThinking(searchLevel);
+    Promise.all([robot.current.getBestMove(game.fen, searchLevel), wait(MIN_THINK_MS)])
       .then(([uci]) => {
-        if (id !== searchId.current) return;
-        game.playUci(uci);
-        setThinking(false);
+        if (id !== searchId.current || !game.playUci(uci)) return;
+        const ply = game.plyCount;
+        setRobotLevels((prev) => {
+          const next = prev.slice(0, ply - 1);
+          next[ply - 1] = searchLevel;
+          return next;
+        });
+        setThinking(null);
         rerender();
       })
       .catch(() => {
-        if (id === searchId.current) setThinking(false);
+        if (id === searchId.current) setThinking(null);
       });
   }
 
   function stopRobot() {
     searchId.current++;
     robot.current?.stop();
-    setThinking(false);
+    setThinking(null);
   }
 
   function afterPlayerAction(changed: boolean) {
@@ -74,12 +87,16 @@ export function RobotGame() {
 
   const onUndo = () => {
     stopRobot();
-    if (game.undo()) rerender();
+    if (game.undo()) {
+      setRobotLevels((prev) => prev.slice(0, game.plyCount));
+      rerender();
+    }
   };
 
   const onNew = () => {
     stopRobot();
     game.reset();
+    setRobotLevels([]);
     rerender();
   };
 
@@ -88,11 +105,14 @@ export function RobotGame() {
   let statusText = "Your turn — tap a piece";
   let waiting = false;
   if (status.kind === "checkmate") {
-    statusText = status.winner === PLAYER ? "Checkmate — you win!" : `Checkmate — ${robotName} wins`;
+    // The robot that delivered mate, even if the level was changed since.
+    const winner = robotLevels[game.plyCount - 1] ?? level;
+    statusText =
+      status.winner === PLAYER ? "Checkmate — you win!" : `Checkmate — ${ROBOTS[winner].name} wins`;
   } else if (status.kind === "draw") {
     statusText = "It's a draw";
   } else if (thinking) {
-    statusText = `${robotName} is thinking…`;
+    statusText = `${ROBOTS[thinking].name} is thinking…`;
     waiting = true;
   } else if (status.check) {
     statusText = "Check! Your turn";
@@ -102,11 +122,13 @@ export function RobotGame() {
 
   // The game stays mounted while the moves are shown, so the robot keeps
   // its turn and the game is unchanged when coming back.
+  // Before the robot's first move, the game's opponent is the selected one.
+  const opponents = opponentsOf(robotLevels);
   if (showMoves) {
     return (
       <GameMoves
         history={game.history()}
-        subtitle={`You vs ${robotName} · Level ${level}`}
+        subtitle={gameSubtitle(opponents.length > 0 ? opponents : [level])}
         onBack={() => setShowMoves(false)}
       />
     );

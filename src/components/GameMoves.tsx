@@ -43,9 +43,12 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
   const { fen, lastMove } = positionAt(entries, ply);
   const moveNumber = moveNumberOf(ply);
 
+  const list = useRef<HTMLOListElement>(null);
   const selectedCell = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    selectedCell.current?.scrollIntoView({ block: "nearest" });
+    // Keep the selected move in view; at the start, show the first moves.
+    if (ply === 0) list.current?.scrollTo({ top: 0 });
+    else selectedCell.current?.scrollIntoView({ block: "nearest" });
   }, [ply]);
 
   const cell = (e: MoveEntry | undefined) => {
@@ -142,7 +145,7 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
           <span>White</span>
           <span>Black</span>
         </div>
-        <ol className={styles.rows}>
+        <ol ref={list} className={styles.rows}>
           {rows.map((row) => (
             <li key={row.number} className={styles.row}>
               <span className={styles.number} aria-hidden="true">
