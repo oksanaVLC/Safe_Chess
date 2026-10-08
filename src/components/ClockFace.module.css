@@ -1,0 +1,22 @@
+/* Brief §3.3: mm:ss, 26 px, tabular numbers, at least 116×48 px. */
+.clock {
+  flex: none;
+  min-width: 116px;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: var(--muted-bg);
+  color: var(--muted-text);
+  font-size: 26px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.running {
+  background: var(--green);
+  color: var(--navy);
+  box-shadow: 0 4px 0 var(--green-dark);
+}

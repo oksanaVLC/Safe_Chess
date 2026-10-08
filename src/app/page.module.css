@@ -25,3 +25,8 @@
   align-items: center;
   justify-content: center;
 }
+
+.secondary {
+  background: var(--white);
+  border: 3px solid var(--green);
+}

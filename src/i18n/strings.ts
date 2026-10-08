@@ -62,6 +62,15 @@ export interface Strings {
   loss: (robot: string) => string;
   draw: string;
 
+  // Robot with a clock
+  /** The person ran out of time. */
+  timeUpLoss: (robot: string) => string;
+  /** The robot ran out of time (`robot` as in "You vs …"). */
+  timeUpWin: (robotVs: string) => string;
+  /** Screen-reader names of the two clocks. */
+  robotClock: (robotVs: string) => string;
+  yourClock: string;
+
   // Promotion picker
   choosePiece: string;
   cancel: string;
@@ -132,6 +141,11 @@ const en: Strings = {
   win: "Checkmate — you win!",
   loss: (robot) => `Checkmate — ${robot} wins this time`,
   draw: "It's a draw",
+
+  timeUpLoss: (robot) => `Time's up — ${robot} wins this time`,
+  timeUpWin: (robot) => `${robot} ran out of time — you win!`,
+  robotClock: (robot) => `${robot}'s clock`,
+  yourClock: "Your clock",
 
   choosePiece: "Choose a piece",
   cancel: "Cancel",
@@ -216,6 +230,11 @@ const es: Strings = {
   loss: (robot) => `Jaque mate — esta vez gana ${robot}`,
   draw: "Es un empate",
 
+  timeUpLoss: (robot) => `Se acabó el tiempo — esta vez gana ${robot}`,
+  timeUpWin: (robot) => `A ${robot} se le acabó el tiempo — ¡has ganado!`,
+  robotClock: (robot) => `Reloj de ${robot}`,
+  yourClock: "Tu reloj",
+
   choosePiece: "Elige una pieza",
   cancel: "Cancelar",
   pieceNames: { k: "Rey", q: "Reina", r: "Torre", b: "Alfil", n: "Caballo", p: "Peón" },
@@ -298,6 +317,11 @@ const ru: Strings = {
   win: "Мат — победа за тобой!",
   loss: (robot) => `Мат — в этот раз побеждает ${robot}`,
   draw: "Ничья",
+
+  timeUpLoss: (robot) => `Время вышло — в этот раз побеждает ${robot}`,
+  timeUpWin: (robot) => `У ${robot} вышло время — победа за тобой!`,
+  robotClock: (robot) => `Часы ${robot}`,
+  yourClock: "Твои часы",
 
   choosePiece: "Выбери фигуру",
   cancel: "Отмена",

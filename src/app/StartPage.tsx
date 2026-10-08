@@ -18,6 +18,9 @@ export function StartPage() {
       <Link href="/robot" className={styles.button}>
         {t.robot}
       </Link>
+      <Link href="/timed" className={`${styles.button} ${styles.secondary}`}>
+        {t.timed}
+      </Link>
     </main>
   );
 }

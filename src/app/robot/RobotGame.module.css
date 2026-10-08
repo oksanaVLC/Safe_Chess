@@ -117,3 +117,36 @@
   outline: 3px solid var(--navy);
   outline-offset: 3px;
 }
+
+/* Robot with a clock: a clock row above and below the board. */
+.timed {
+  gap: 8px;
+}
+
+.clockRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 4px;
+}
+
+/* Long end-of-game messages wrap to up to three lines beside the clock. */
+.who {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.whoWaiting {
+  color: var(--muted-text);
+}
+
+.whoWaiting .dot {
+  background: var(--muted-text);
+}
