@@ -66,12 +66,28 @@ export class GameController {
   private last: LastMove | null = null;
   private pending: PendingPromotion | null = null;
 
-  constructor(fen?: string) {
+  /**
+   * @param humanColor The side the person plays; taps on the other side's
+   *   turn are ignored. `null` lets one person play both sides.
+   */
+  constructor(
+    fen?: string,
+    readonly humanColor: Color | null = null,
+  ) {
     this.chess = fen ? new Chess(fen) : new Chess();
   }
 
   get fen(): string {
     return this.chess.fen();
+  }
+
+  get turn(): Color {
+    return this.chess.turn();
+  }
+
+  /** Number of half-moves played. */
+  get plyCount(): number {
+    return this.chess.history().length;
   }
 
   get selectedSquare(): Square | null {
@@ -129,6 +145,7 @@ export class GameController {
    */
   tap(square: Square): boolean {
     if (this.isOver || this.pending) return false;
+    if (this.humanColor && this.chess.turn() !== this.humanColor) return false;
 
     if (this.selected && this.targets().some((t) => t.to === square)) {
       if (this.isPromotion(this.selected, square)) {
@@ -163,6 +180,44 @@ export class GameController {
     if (!this.pending) return false;
     this.pending = null;
     return true;
+  }
+
+  /** Plays a move given in UCI, e.g. "e2e4" or "e7e8q" (used for the robot). */
+  playUci(uci: string): boolean {
+    const promotion = uci[4] as PromotionPiece | undefined;
+    return this.move(uci.slice(0, 2) as Square, uci.slice(2, 4) as Square, promotion);
+  }
+
+  /**
+   * Undo for robot games: takes back the person's last move and the robot's
+   * reply to it (or only the person's move if the robot has not replied).
+   */
+  undo(): boolean {
+    if (!this.canUndo) return false;
+    const human = this.humanColor;
+    this.chess.undo();
+    while (human && this.chess.turn() !== human && this.chess.history().length > 0) {
+      this.chess.undo();
+    }
+    this.selected = null;
+    this.pending = null;
+    const prev = this.chess.history({ verbose: true }).at(-1);
+    this.last = prev ? { from: prev.from, to: prev.to } : null;
+    return true;
+  }
+
+  /** True when the person has a move that Undo can take back. */
+  get canUndo(): boolean {
+    const history = this.chess.history({ verbose: true });
+    return history.some((m) => !this.humanColor || m.color === this.humanColor);
+  }
+
+  /** Starts a new game from the initial position. */
+  reset(): void {
+    this.chess.reset();
+    this.selected = null;
+    this.pending = null;
+    this.last = null;
   }
 
   /** Plays a move if legal. A promotion needs the piece to be given. */

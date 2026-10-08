@@ -1,0 +1,92 @@
+.card {
+  background: var(--white);
+  border-radius: 24px;
+  padding: 12px;
+  box-shadow:
+    0 2px 0 #e4e6ee,
+    0 8px 24px rgba(44, 46, 72, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.level {
+  height: 72px;
+  padding: 0;
+  border-radius: 18px;
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--navy);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.on {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--white);
+}
+
+.level:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 2px;
+}
+
+.number {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 6px 4px;
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.tagline {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--muted-text);
+}
+
+.meter {
+  display: flex;
+  gap: 5px;
+  flex: none;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e1e3ea;
+}
+
+.filled {
+  background: var(--green);
+}

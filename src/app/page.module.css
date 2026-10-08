@@ -1,0 +1,27 @@
+.screen {
+  min-height: 100dvh;
+  padding: 20px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.button {
+  height: 90px;
+  border-radius: 26px;
+  background: var(--green);
+  box-shadow: 0 5px 0 var(--green-dark);
+  color: var(--navy);
+  font-size: 22px;
+  font-weight: 900;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

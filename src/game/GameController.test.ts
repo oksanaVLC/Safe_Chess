@@ -208,3 +208,92 @@ describe("promotion", () => {
     expect(g.cancelPromotion()).toBe(false);
   });
 });
+
+describe("robot games", () => {
+  it("ignores taps on the robot's turn", () => {
+    const g = new GameController(undefined, "w");
+    g.move("e2", "e4");
+    expect(g.tap("e7")).toBe(false);
+    expect(g.selectedSquare).toBeNull();
+  });
+
+  it("plays moves given in UCI, including promotion", () => {
+    const g = new GameController("7k/8/8/8/8/8/p7/7K b - - 0 1");
+    expect(g.playUci("a2a1n")).toBe(true);
+    expect(g.pieceAt("a1")).toEqual({ type: "n", color: "b" });
+    expect(g.lastMove).toEqual({ from: "a2", to: "a1" });
+    expect(g.playUci("h1h3")).toBe(false);
+  });
+
+  it("undoes the person's move and the robot's reply", () => {
+    const g = new GameController(undefined, "w");
+    g.move("e2", "e4");
+    g.playUci("e7e5");
+    g.move("g1", "f3");
+    g.playUci("b8c6");
+    expect(g.undo()).toBe(true);
+    expect(g.plyCount).toBe(2);
+    expect(g.turn).toBe("w");
+    expect(g.pieceAt("g1")).toEqual({ type: "n", color: "w" });
+    expect(g.pieceAt("b8")).toEqual({ type: "n", color: "b" });
+    expect(g.lastMove).toEqual({ from: "e7", to: "e5" });
+  });
+
+  it("undoes only the person's move while the robot has not replied", () => {
+    const g = new GameController(undefined, "w");
+    g.move("e2", "e4");
+    g.playUci("e7e5");
+    g.move("d2", "d4");
+    g.undo();
+    expect(g.plyCount).toBe(2);
+    expect(g.turn).toBe("w");
+  });
+
+  it("undoes back to the start and then has nothing to undo", () => {
+    const g = new GameController(undefined, "w");
+    expect(g.canUndo).toBe(false);
+    g.move("e2", "e4");
+    g.playUci("e7e5");
+    expect(g.canUndo).toBe(true);
+    g.undo();
+    expect(g.plyCount).toBe(0);
+    expect(g.lastMove).toBeNull();
+    expect(g.canUndo).toBe(false);
+    expect(g.undo()).toBe(false);
+  });
+
+  it("can undo after the robot wins", () => {
+    const g = new GameController(undefined, "w");
+    g.move("f2", "f3");
+    g.playUci("e7e5");
+    g.move("g2", "g4");
+    g.playUci("d8h4");
+    expect(g.status.kind).toBe("checkmate");
+    g.undo();
+    expect(g.status).toEqual({ kind: "playing", turn: "w", check: false });
+    expect(g.plyCount).toBe(2);
+  });
+
+  it("clears the selection and a pending promotion on undo", () => {
+    const g = new GameController("1n5k/P7/8/8/8/8/7p/K7 w - - 0 1", "w");
+    g.move("a1", "a2");
+    g.playUci("h8h7");
+    g.tap("a7");
+    g.tap("a8");
+    expect(g.pendingPromotion).not.toBeNull();
+    g.undo();
+    expect(g.pendingPromotion).toBeNull();
+    expect(g.selectedSquare).toBeNull();
+  });
+
+  it("starts a new game", () => {
+    const g = new GameController(undefined, "w");
+    g.move("e2", "e4");
+    g.tap("d2");
+    g.reset();
+    expect(g.plyCount).toBe(0);
+    expect(g.lastMove).toBeNull();
+    expect(g.selectedSquare).toBeNull();
+    expect(g.pieceAt("e2")).toEqual({ type: "p", color: "w" });
+  });
+});
