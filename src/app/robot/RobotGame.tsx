@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { Board } from "@/components/Board";
+import { GameMoves } from "@/components/GameMoves";
 import { BackIcon, MovesIcon, NewGameIcon, UndoIcon } from "@/components/icons";
 import { LevelToolbar } from "@/components/LevelToolbar";
 import { PromotionPicker } from "@/components/PromotionPicker";
@@ -24,6 +25,7 @@ export function RobotGame() {
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [level, setLevel] = useState<Level>(3);
   const [thinking, setThinking] = useState(false);
+  const [showMoves, setShowMoves] = useState(false);
   const robot = useRef<Robot | null>(null);
   /** Bumped to discard a robot reply that is no longer wanted. */
   const searchId = useRef(0);
@@ -98,6 +100,18 @@ export function RobotGame() {
 
   const pending = game.pendingPromotion;
 
+  // The game stays mounted while the moves are shown, so the robot keeps
+  // its turn and the game is unchanged when coming back.
+  if (showMoves) {
+    return (
+      <GameMoves
+        history={game.history()}
+        subtitle={`You vs ${robotName} · Level ${level}`}
+        onBack={() => setShowMoves(false)}
+      />
+    );
+  }
+
   return (
     <main className={styles.screen}>
       <header className={styles.topBar}>
@@ -121,8 +135,7 @@ export function RobotGame() {
           <UndoIcon />
           Undo
         </button>
-        {/* Opens the Game moves screen once it exists (Step 3). */}
-        <button type="button" className={styles.secondary} disabled>
+        <button type="button" className={styles.secondary} onClick={() => setShowMoves(true)}>
           <MovesIcon />
           Moves
         </button>

@@ -1,4 +1,4 @@
-import { Chess, type Color, type PieceSymbol, type Square } from "chess.js";
+import { Chess, type Color, type Move, type PieceSymbol, type Square } from "chess.js";
 
 export type { Color, PieceSymbol, Square };
 
@@ -56,6 +56,19 @@ export function isDarkSquare(square: Square): boolean {
   return (file + rank) % 2 === 0; // a1 is dark
 }
 
+/** Squares of a position for display only (no selection or move markers). */
+export function positionSquares(fen: string, last: LastMove | null): SquareView[] {
+  const chess = new Chess(fen);
+  return SQUARES.map((square) => ({
+    square,
+    piece: chess.get(square) ?? null,
+    dark: isDarkSquare(square),
+    selected: false,
+    lastMove: !!last && (square === last.from || square === last.to),
+    target: null,
+  }));
+}
+
 /**
  * Owns the game state (through chess.js) and the tap-to-move interaction.
  * The UI only renders what this class reports and forwards taps to it.
@@ -83,6 +96,11 @@ export class GameController {
 
   get turn(): Color {
     return this.chess.turn();
+  }
+
+  /** All moves played so far, oldest first. */
+  history(): Move[] {
+    return this.chess.history({ verbose: true });
   }
 
   /** Number of half-moves played. */

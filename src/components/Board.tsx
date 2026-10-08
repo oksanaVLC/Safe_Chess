@@ -13,31 +13,28 @@ const NAMES: Record<PieceSymbol, string> = {
   p: "pawn",
 };
 
-interface BoardProps {
-  squares: SquareView[];
-  onTap: (square: SquareView["square"]) => void;
-}
+type BoardProps =
+  | { squares: SquareView[]; onTap: (square: SquareView["square"]) => void; size?: "game" }
+  /** Display-only board (Game moves screen), 37 px squares. */
+  | { squares: SquareView[]; onTap?: undefined; size: "mini"; label: string };
 
-export function Board({ squares, onTap }: BoardProps) {
+export function Board(props: BoardProps) {
+  const { squares, onTap } = props;
+  const mini = props.size === "mini";
   return (
-    <div className={styles.frame}>
-      <div className={styles.grid}>
+    <div className={`${styles.frame} ${mini ? styles.mini : ""}`}>
+      <div
+        className={styles.grid}
+        role={mini ? "img" : undefined}
+        aria-label={mini ? props.label : undefined}
+      >
         {squares.map((sq) => {
           const tint = sq.lastMove ? (sq.dark ? styles.lastDark : styles.lastLight) : "";
-          const label = sq.piece
-            ? `${sq.square}, ${sq.piece.color === "w" ? "white" : "black"} ${NAMES[sq.piece.type]}`
-            : sq.square;
-          return (
-            <button
-              key={sq.square}
-              type="button"
-              className={`${styles.square} ${sq.dark ? styles.dark : styles.light} ${tint} ${
-                sq.selected ? styles.selected : ""
-              }`}
-              aria-label={label}
-              aria-pressed={sq.selected}
-              onClick={() => onTap(sq.square)}
-            >
+          const className = `${styles.square} ${sq.dark ? styles.dark : styles.light} ${tint} ${
+            sq.selected ? styles.selected : ""
+          }`;
+          const content = (
+            <>
               {sq.piece && (
                 <span className={styles.glyph}>
                   <PieceGlyph piece={sq.piece} />
@@ -55,6 +52,28 @@ export function Board({ squares, onTap }: BoardProps) {
                   {sq.square[0]}
                 </span>
               )}
+            </>
+          );
+          if (!onTap) {
+            return (
+              <div key={sq.square} className={className} aria-hidden="true">
+                {content}
+              </div>
+            );
+          }
+          const label = sq.piece
+            ? `${sq.square}, ${sq.piece.color === "w" ? "white" : "black"} ${NAMES[sq.piece.type]}`
+            : sq.square;
+          return (
+            <button
+              key={sq.square}
+              type="button"
+              className={className}
+              aria-label={label}
+              aria-pressed={sq.selected}
+              onClick={() => onTap(sq.square)}
+            >
+              {content}
             </button>
           );
         })}

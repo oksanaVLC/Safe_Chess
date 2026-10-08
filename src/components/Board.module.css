@@ -8,6 +8,34 @@
   background: var(--navy);
 }
 
+/* Game moves screen: 37 px squares. */
+.mini {
+  --board: min(296px, calc(100vw - 38px));
+  border-radius: 12px;
+}
+
+.mini .grid {
+  border-radius: 8px;
+}
+
+.mini .square {
+  cursor: default;
+}
+
+.mini .coord {
+  font-size: 10px;
+}
+
+.mini .rank {
+  left: 2px;
+  top: 1px;
+}
+
+.mini .file {
+  right: 2px;
+  bottom: 1px;
+}
+
 .grid {
   container-type: inline-size;
   width: var(--board);

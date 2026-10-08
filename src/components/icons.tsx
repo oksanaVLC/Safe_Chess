@@ -57,3 +57,37 @@ export function NewGameIcon({ size = 24 }: IconProps) {
     </svg>
   );
 }
+
+export function FirstIcon({ size = 24 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2.4}>
+      <path d="M6 5v14" />
+      <path d="M18 5l-7 7 7 7" />
+    </svg>
+  );
+}
+
+export function PreviousIcon({ size = 30 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2.6}>
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+  );
+}
+
+export function NextIcon({ size = 30 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2.6}>
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+export function LastIcon({ size = 24 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2.4}>
+      <path d="M18 5v14" />
+      <path d="M6 5l7 7-7 7" />
+    </svg>
+  );
+}
