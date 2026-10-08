@@ -5,6 +5,7 @@ import "@fontsource/nunito/800.css";
 import "@fontsource/nunito/900.css";
 import "./globals.css";
 import { HtmlLang } from "@/i18n/HtmlLang";
+import { ServiceWorker } from "./ServiceWorker";
 
 export const metadata: Metadata = {
   description: "Chess for kids — and grown-ups too",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en">
       <body>
         <HtmlLang />
+        <ServiceWorker />
         {children}
       </body>
     </html>
