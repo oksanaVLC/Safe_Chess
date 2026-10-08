@@ -97,12 +97,6 @@ describe("special moves", () => {
     expect(g.pieceAt("f1")).toEqual({ type: "r", color: "w" });
   });
 
-  it("promotes a pawn to a queen", () => {
-    const g = new GameController("8/P6k/8/8/8/8/8/K7 w - - 0 1");
-    g.tap("a7");
-    g.tap("a8");
-    expect(g.pieceAt("a8")).toEqual({ type: "q", color: "w" });
-  });
 
   it("does not allow moves that leave the king in check", () => {
     // White king e1, white bishop e2 pinned by a black rook on e8.
@@ -132,5 +126,85 @@ describe("game status", () => {
     const g = new GameController("7k/8/6Q1/8/8/8/8/K7 w - - 0 1");
     g.move("g6", "f7");
     expect(g.status).toEqual({ kind: "draw", reason: "stalemate" });
+  });
+});
+
+describe("promotion", () => {
+  const PROMO = "1n5k/P7/8/8/8/8/8/K7 w - - 0 1"; // white pawn a7, black knight b8
+
+  it("shows a promotion square once among the targets", () => {
+    const g = new GameController(PROMO);
+    g.tap("a7");
+    expect(g.targets()).toEqual([
+      { to: "a8", capture: false },
+      { to: "b8", capture: true },
+    ]);
+  });
+
+  it("waits for a choice instead of auto-promoting", () => {
+    const g = new GameController(PROMO);
+    g.tap("a7");
+    expect(g.tap("a8")).toBe(true);
+    expect(g.pendingPromotion).toEqual({ from: "a7", to: "a8", color: "w" });
+    expect(g.pieceAt("a7")).toEqual({ type: "p", color: "w" });
+    expect(g.pieceAt("a8")).toBeNull();
+  });
+
+  it.each(["q", "r", "b", "n"] as const)("promotes to the chosen piece (%s)", (piece) => {
+    const g = new GameController(PROMO);
+    g.tap("a7");
+    g.tap("a8");
+    expect(g.promote(piece)).toBe(true);
+    expect(g.pieceAt("a8")).toEqual({ type: piece, color: "w" });
+    expect(g.pendingPromotion).toBeNull();
+    expect(g.lastMove).toEqual({ from: "a7", to: "a8" });
+    expect(g.status).toMatchObject({ kind: "playing", turn: "b" });
+  });
+
+  it("promotes with a capture", () => {
+    const g = new GameController(PROMO);
+    g.tap("a7");
+    g.tap("b8");
+    g.promote("n");
+    expect(g.pieceAt("b8")).toEqual({ type: "n", color: "w" });
+  });
+
+  it("promotes a black pawn", () => {
+    const g = new GameController("7k/8/8/8/8/8/p7/7K b - - 0 1");
+    g.tap("a2");
+    g.tap("a1");
+    expect(g.pendingPromotion?.color).toBe("b");
+    g.promote("r");
+    expect(g.pieceAt("a1")).toEqual({ type: "r", color: "b" });
+  });
+
+  it("ignores board taps while the choice is pending", () => {
+    const g = new GameController(PROMO);
+    g.tap("a7");
+    g.tap("a8");
+    expect(g.tap("a1")).toBe(false);
+    expect(g.pendingPromotion).not.toBeNull();
+  });
+
+  it("can be cancelled, keeping the pawn selected", () => {
+    const g = new GameController(PROMO);
+    g.tap("a7");
+    g.tap("a8");
+    expect(g.cancelPromotion()).toBe(true);
+    expect(g.pendingPromotion).toBeNull();
+    expect(g.selectedSquare).toBe("a7");
+    expect(g.pieceAt("a7")).toEqual({ type: "p", color: "w" });
+  });
+
+  it("rejects a promotion move without a chosen piece", () => {
+    const g = new GameController(PROMO);
+    expect(g.move("a7", "a8")).toBe(false);
+    expect(g.pieceAt("a7")).toEqual({ type: "p", color: "w" });
+  });
+
+  it("does nothing when no promotion is pending", () => {
+    const g = new GameController();
+    expect(g.promote("q")).toBe(false);
+    expect(g.cancelPromotion()).toBe(false);
   });
 });

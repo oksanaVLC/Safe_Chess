@@ -1,0 +1,20 @@
+.piece {
+  display: inline-grid;
+  font-family: var(--font-pieces);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Both layers share one grid cell, so they sit exactly on top of each other. */
+.piece > span {
+  grid-area: 1 / 1;
+  text-align: center;
+}
+
+.whiteFill {
+  color: var(--white);
+}
+
+.navy {
+  color: var(--navy);
+}

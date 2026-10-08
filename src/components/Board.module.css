@@ -60,18 +60,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-pieces);
   font-size: 10.2cqw; /* 36 px on a 44 px square */
-  line-height: 1;
-  pointer-events: none;
-}
-
-.whiteFill {
-  color: var(--white);
-}
-
-.navy {
-  color: var(--navy);
 }
 
 .dot {

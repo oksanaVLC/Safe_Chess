@@ -2,11 +2,8 @@
 
 import type { PieceSymbol, SquareView } from "@/game/GameController";
 import styles from "./Board.module.css";
+import { PieceGlyph } from "./PieceGlyph";
 
-// Text presentation selector keeps ♟ from turning into an emoji in fallback fonts.
-const VS15 = "︎";
-const SOLID: Record<PieceSymbol, string> = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
-const OUTLINE: Record<PieceSymbol, string> = { k: "♔", q: "♕", r: "♖", b: "♗", n: "♘", p: "♙" };
 const NAMES: Record<PieceSymbol, string> = {
   k: "king",
   q: "queen",
@@ -41,19 +38,9 @@ export function Board({ squares, onTap }: BoardProps) {
               aria-pressed={sq.selected}
               onClick={() => onTap(sq.square)}
             >
-              {sq.piece?.color === "w" && (
-                <>
-                  <span className={`${styles.glyph} ${styles.whiteFill}`} aria-hidden="true">
-                    {SOLID[sq.piece.type] + VS15}
-                  </span>
-                  <span className={`${styles.glyph} ${styles.navy}`} aria-hidden="true">
-                    {OUTLINE[sq.piece.type] + VS15}
-                  </span>
-                </>
-              )}
-              {sq.piece?.color === "b" && (
-                <span className={`${styles.glyph} ${styles.navy}`} aria-hidden="true">
-                  {SOLID[sq.piece.type] + VS15}
+              {sq.piece && (
+                <span className={styles.glyph}>
+                  <PieceGlyph piece={sq.piece} />
                 </span>
               )}
               {sq.target === "move" && <span className={styles.dot} aria-hidden="true" />}

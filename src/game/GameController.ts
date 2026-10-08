@@ -17,6 +17,16 @@ export interface LastMove {
   to: Square;
 }
 
+/** Pieces a pawn can become. */
+export type PromotionPiece = "q" | "r" | "b" | "n";
+export const PROMOTION_PIECES: PromotionPiece[] = ["q", "r", "b", "n"];
+
+export interface PendingPromotion {
+  from: Square;
+  to: Square;
+  color: Color;
+}
+
 export type GameStatus =
   | { kind: "playing"; turn: Color; check: boolean }
   | { kind: "checkmate"; winner: Color }
@@ -54,6 +64,7 @@ export class GameController {
   private chess: Chess;
   private selected: Square | null = null;
   private last: LastMove | null = null;
+  private pending: PendingPromotion | null = null;
 
   constructor(fen?: string) {
     this.chess = fen ? new Chess(fen) : new Chess();
@@ -69,6 +80,11 @@ export class GameController {
 
   get lastMove(): LastMove | null {
     return this.last;
+  }
+
+  /** Set while a pawn move waits for the player to choose a piece. */
+  get pendingPromotion(): PendingPromotion | null {
+    return this.pending;
   }
 
   get status(): GameStatus {
@@ -89,25 +105,36 @@ export class GameController {
     return this.chess.get(square) ?? null;
   }
 
-  /** Legal destinations of the selected piece. */
+  /** Legal destinations of the selected piece (a promotion square appears once). */
   targets(): Target[] {
     if (!this.selected) return [];
-    return this.chess.moves({ square: this.selected, verbose: true }).map((m) => ({
-      to: m.to,
-      capture: m.isCapture() || m.isEnPassant(),
-    }));
+    const byTarget = new Map<Square, Target>();
+    for (const m of this.chess.moves({ square: this.selected, verbose: true })) {
+      byTarget.set(m.to, { to: m.to, capture: m.isCapture() || m.isEnPassant() });
+    }
+    return [...byTarget.values()];
+  }
+
+  private isPromotion(from: Square, to: Square): boolean {
+    return this.chess.moves({ square: from, verbose: true }).some((m) => m.to === to && m.isPromotion());
   }
 
   /**
    * Handles a tap on a square. Returns true if anything changed.
    * - Tap own piece: select it (tap again to deselect).
-   * - Tap a legal target of the selected piece: play the move.
+   * - Tap a legal target of the selected piece: play the move, or, for a
+   *   pawn reaching the last rank, wait for the promotion choice.
    * - Tap anything else: clear the selection.
+   * Taps are ignored while a promotion choice is pending.
    */
   tap(square: Square): boolean {
-    if (this.isOver) return false;
+    if (this.isOver || this.pending) return false;
 
     if (this.selected && this.targets().some((t) => t.to === square)) {
+      if (this.isPromotion(this.selected, square)) {
+        this.pending = { from: this.selected, to: square, color: this.chess.turn() };
+        return true;
+      }
       return this.move(this.selected, square);
     }
 
@@ -124,12 +151,27 @@ export class GameController {
     return false;
   }
 
-  /** Plays a move if legal. Pawns reaching the last rank become queens. */
-  move(from: Square, to: Square): boolean {
+  /** Completes the pending pawn move with the chosen piece. */
+  promote(piece: PromotionPiece): boolean {
+    if (!this.pending) return false;
+    const { from, to } = this.pending;
+    return this.move(from, to, piece);
+  }
+
+  /** Cancels the pending pawn move; the pawn stays selected. */
+  cancelPromotion(): boolean {
+    if (!this.pending) return false;
+    this.pending = null;
+    return true;
+  }
+
+  /** Plays a move if legal. A promotion needs the piece to be given. */
+  move(from: Square, to: Square, promotion?: PromotionPiece): boolean {
     try {
-      const m = this.chess.move({ from, to, promotion: "q" });
+      const m = this.chess.move({ from, to, promotion });
       this.last = { from: m.from, to: m.to };
       this.selected = null;
+      this.pending = null;
       return true;
     } catch {
       return false;

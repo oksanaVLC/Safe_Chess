@@ -2,7 +2,13 @@
 
 import { useReducer, useState } from "react";
 import { Board } from "@/components/Board";
-import { GameController, type GameStatus, type Square } from "@/game/GameController";
+import { PromotionPicker } from "@/components/PromotionPicker";
+import {
+  GameController,
+  type GameStatus,
+  type PromotionPiece,
+  type Square,
+} from "@/game/GameController";
 import styles from "./BoardTest.module.css";
 
 // Step 1 only: both sides are played by tapping on one phone. These status
@@ -23,7 +29,16 @@ export function BoardTest() {
     if (game.tap(square)) rerender();
   };
 
+  const onPick = (piece: PromotionPiece) => {
+    if (game.promote(piece)) rerender();
+  };
+
+  const onCancelPromotion = () => {
+    if (game.cancelPromotion()) rerender();
+  };
+
   const status = game.status;
+  const pending = game.pendingPromotion;
 
   return (
     <main className={styles.screen}>
@@ -33,6 +48,9 @@ export function BoardTest() {
         <span className={styles.dot} aria-hidden="true" />
         {statusText(status)}
       </p>
+      {pending && (
+        <PromotionPicker color={pending.color} onPick={onPick} onCancel={onCancelPromotion} />
+      )}
     </main>
   );
 }
