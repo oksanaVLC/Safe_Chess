@@ -1254,17 +1254,16 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 4e. Cleanup: THREE independent pg_cron jobs (design B5, v9)
+-- 4e. Cleanup: TWO independent pg_cron jobs (design B5, v9; the
+--     anonymous-user cleanup job of v9 is not part of this version)
 --
 --   Each pg_cron job runs in its OWN transaction. A failure in one job
 --   rolls back only that job's work; the other jobs are unaffected, and
 --   the failure is visible in cron.job_run_details. Every job retries on
 --   its next run (every 5 minutes).
 --
---   No job ever WAITS for a per-user lock:
---     job 1 and job 2 take no per-user locks at all;
---     job 3 holds no public.games row locks and only TRIES user locks.
---   Each job's own "one run at a time" lock is try-only as well.
+--   No job takes a per-user lock: job 1 and job 2 never touch them.
+--   Each job's own "one run at a time" lock is try-only.
 --
 --   Bounds per run:
 --     job 1 and job 2 handle at most 25 rows, oldest first. The trigger
@@ -1273,10 +1272,6 @@ end $$;
 --     are repeated outside the bounded subquery, so a row changed by a
 --     concurrent move, join or cancel is re-checked against its current
 --     version and skipped if no longer eligible.
---     job 3 examines at most 100 candidates, oldest first, and stops
---     after 25 effective deletions. A skipped candidate (lock busy,
---     error) uses a candidate place, not a deletion place, so the queue
---     stalls only if all 100 oldest candidates are skipped.
 --   Lock waits: job 1 and job 2 run with lock_timeout = 5s (function SET
 --   clause, restored when the function returns). A longer wait raises
 --   SQLSTATE 55P03 and aborts the WHOLE run: every row of the batch and
@@ -1341,67 +1336,7 @@ begin
      and g.ended_at <= now() - interval '1 hour';
 end $$;
 
--- job 3: delete stale anonymous users, BOUNDED batch
---   examines at most 100 candidates per run, oldest first, and stops
---   after 25 effective deletions (see 4e); a larger backlog is worked
---   through on following runs (up to 25 per 5 min = 7,200/day).
---   Each user is handled in its own subtransaction: a failure for one
---   user (lock busy, a concurrent change, anything else) skips only
---   that user, and the run continues.
-create function private.delete_stale_anonymous_users()
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  u         record;
-  v_deleted int := 0;              -- effective deletions this run
-  v_rows    int;
-  v_skipped int := 0;
-begin
-  if not pg_try_advisory_xact_lock(
-       hashtextextended('safe-chess:job:delete-users', 0)) then
-    return;
-  end if;
-
-  for u in
-    select au.id
-      from auth.users au
-     where au.is_anonymous
-       and au.created_at <= now() - interval '24 hours'
-       and not exists (select 1 from public.games g
-                        where au.id in (g.white_id, g.black_id))
-     order by au.created_at
-     limit 100                     -- candidates examined per run
-  loop
-    exit when v_deleted >= 25;     -- effective deletions per run
-    begin
-      -- try only: never wait for a user's create/join to finish
-      if pg_try_advisory_xact_lock(private.user_lock_key(u.id)) then
-        -- fresh statement after the lock is held: re-check "no games"
-        delete from auth.users au
-         where au.id = u.id
-           and au.is_anonymous
-           and not exists (select 1 from public.games g
-                            where au.id in (g.white_id, g.black_id));
-        get diagnostics v_rows = row_count;  -- 0 if it now has a game
-        v_deleted := v_deleted + v_rows;
-      else
-        v_skipped := v_skipped + 1;          -- busy: retried next run
-      end if;
-    exception when others then
-      v_skipped := v_skipped + 1;            -- this user only
-    end;
-  end loop;
-
-  if v_skipped > 0 then
-    raise log 'delete_stale_anonymous_users: % user(s) skipped',
-      v_skipped;                             -- a count, never an id
-  end if;
-end $$;
-
--- The schedules for these three functions are created in Step 7.
+-- The schedules for these two functions are created in Step 7.
 
 -- #####################################################################
 -- Step 5: ALL grants, revokes and RLS (from step7-3-grants-rls.sql v5)
@@ -1427,6 +1362,8 @@ end $$;
 --   v4  per-user advisory-lock helpers (design D8) are owner-only.
 --   v5  cleanup is three pg_cron jobs (Step 4 §4e); cancel_friend_game
 --       now returns (result, game_id).
+--   v6  the anonymous-user cleanup job and its function are removed:
+--       cleanup is two pg_cron jobs, and nothing here deletes users.
 -- =====================================================================
 
 -- private schema: not exposed in the API, no access for any API role
@@ -1481,11 +1418,9 @@ revoke all on function private.expire_friend_games()
   from public, anon, authenticated, service_role;
 revoke all on function private.delete_ended_friend_games()
   from public, anon, authenticated, service_role;
-revoke all on function private.delete_stale_anonymous_users()
-  from public, anon, authenticated, service_role;
 
 -- Per-user lock helpers (design D8): used only inside the owner-run
--- create/cancel/join functions and cleanup
+-- create/cancel/join functions
 revoke all on function private.user_lock_key(uuid)
   from public, anon, authenticated, service_role;
 revoke all on function private.lock_users(uuid, uuid)
@@ -1514,7 +1449,7 @@ revoke all on function
 --                                                       only service_role has
 --   friend-move Edge Function  reads the row with the   authenticated + RLS
 --     (read step)              CALLER's token          (SELECT policy)
---   cleanup jobs (3, Step 4)   owner, via pg_cron      owner's rights
+--   cleanup jobs (2, Step 4)   owner, via pg_cron      owner's rights
 --   games_broadcast trigger    owner (SECURITY DEFINER) owner's rights
 --
 -- So service_role needs only EXECUTE on apply_friend_move. Holding the
@@ -1545,8 +1480,8 @@ revoke all on function
 --       DELETE own waiting row under a row lock (design D8; plus 1d)
 --   apply_friend_move(...)         (friend-move Edge Function only)
 --       one validated move; Step 3
---   expire / delete-ended / delete-users jobs  (pg_cron only)
---       expiry and deletion; design B5, Step 4 §4e
+--   expire / delete-ended jobs     (pg_cron only)
+--       game expiry and deletion; design B5, Step 4 §4e
 -- ---------------------------------------------------------------------
 
 -- #####################################################################
@@ -1587,5 +1522,3 @@ select cron.schedule('safe-chess-expire',        '*/5 * * * *',
   $$select private.expire_friend_games()$$);
 select cron.schedule('safe-chess-delete-ended',  '*/5 * * * *',
   $$select private.delete_ended_friend_games()$$);
-select cron.schedule('safe-chess-delete-users',  '*/5 * * * *',
-  $$select private.delete_stale_anonymous_users()$$);

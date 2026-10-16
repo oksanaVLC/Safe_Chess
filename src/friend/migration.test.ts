@@ -72,7 +72,6 @@ describe("friend-mode migration", () => {
         "public.join_friend_game",
         "private.expire_friend_games",
         "private.delete_ended_friend_games",
-        "private.delete_stale_anonymous_users",
       ].sort(),
     );
   });
@@ -97,7 +96,6 @@ describe("friend-mode migration", () => {
         "public.join_friend_game",
         "private.expire_friend_games",
         "private.delete_ended_friend_games",
-        "private.delete_stale_anonymous_users",
       ].sort(),
     );
   });
@@ -240,12 +238,11 @@ describe("friend-mode migration structure", () => {
     expect(step0).not.toMatch(/'auth\.users'::regclass/);
   });
 
-  it("schedules the three cleanup jobs last, each calling a defined function", () => {
+  it("schedules the two cleanup jobs last, each calling a defined function", () => {
     const schedules = [...sql.matchAll(/cron\.schedule\('([\w-]+)',\s*'([^']+)',\s*\$\$select ([\w.]+)\(\)\$\$\)/g)];
     expect(schedules.map((m) => m[1])).toEqual([
       "safe-chess-expire",
       "safe-chess-delete-ended",
-      "safe-chess-delete-users",
     ]);
     const names = functions().map((f) => f.name);
     for (const m of schedules) {
@@ -394,11 +391,39 @@ describe("cleanup jobs", () => {
     expect(withTimeout).toEqual(["private.delete_ended_friend_games", "private.expire_friend_games"]);
   });
 
-  it("lets job 3 examine 100 candidates, oldest first, for at most 25 deletions", () => {
-    const body = executable("private.delete_stale_anonymous_users");
-    expect(body.match(/\blimit \d+/g)).toEqual(["limit 100"]);
-    expect(body).toMatch(/order by au\.created_at\s+limit 100\s+loop\s+exit when v_deleted >= 25;/);
-    expect(body).toMatch(/get diagnostics v_rows = row_count;\s+v_deleted := v_deleted \+ v_rows;/);
-    expect(body).not.toMatch(/random\(\)/);
+  // DELETE FROM [ONLY] auth.x or TRUNCATE ... auth.x, "auth" quoted or not,
+  // any case and spacing (same as M-verify row 36). A text search: it can't
+  // see SQL assembled at run time (execute 'delete from ' || v_schema ...).
+  const authWrite = /(?:\bdelete\s+from\s+(?:only\s+)?|\btruncate\b[^;]*)"?\bauth\b"?\s*\./i;
+
+  it("recognises the forms of an auth delete or truncate it looks for", () => {
+    for (const hit of [
+      "delete from auth.users",
+      "DELETE   FROM\n  auth.users where id = 1",
+      "delete from only auth.users",
+      'delete from "auth".users',
+      'DELETE FROM ONLY "auth"."users"',
+      "truncate auth.users",
+      "TRUNCATE TABLE ONLY auth.users",
+      "truncate public.games, auth.users",
+      "execute 'delete from auth.users'",
+    ]) {
+      expect(hit, hit).toMatch(authWrite);
+    }
+    for (const miss of [
+      "delete from public.games where (select auth.uid()) in (white_id, black_id)",
+      "raise exception 'games: truncate is not allowed';",
+      "execute function private.games_no_truncate();",
+      "truncate public.games; select auth.uid()",
+      "truncate oauth.tokens",
+    ]) {
+      expect(miss, miss).not.toMatch(authWrite);
+    }
+  });
+
+  it("never deletes users and schedules no user cleanup", () => {
+    expect(sql).not.toMatch(authWrite);
+    expect(sql).not.toMatch(/delete_stale_anonymous_users|safe-chess-delete-users/);
+    expect(sql.match(/select cron\.schedule\(/g)).toHaveLength(2);
   });
 });
