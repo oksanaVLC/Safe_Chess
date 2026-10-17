@@ -1,0 +1,153 @@
+.screen {
+  min-height: 100dvh;
+  padding: 20px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+}
+
+.back {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--white);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.lead {
+  margin: 0;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+/* QR code and typed code */
+.card {
+  align-self: center;
+  width: min(100%, 300px);
+  padding: 22px 20px 18px;
+  border-radius: 28px;
+  background: var(--white);
+  box-shadow: 0 4px 0 var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+
+.orType {
+  margin: 14px 0 2px;
+  color: var(--muted-text);
+  font-size: 16px;
+}
+
+.code {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 5px; /* room for the 3D shadow */
+}
+
+.share {
+  height: 68px;
+  border: none;
+  border-radius: 26px;
+  background: var(--navy);
+  box-shadow: 0 5px 0 var(--navy-dark);
+  color: var(--white);
+  font-size: 21px;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.waiting {
+  align-self: center;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid var(--green);
+  border-right-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
+
+.problem {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.problemText {
+  margin: 0;
+  text-align: center;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.back:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.back:focus-visible,
+.share:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+}

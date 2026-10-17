@@ -21,6 +21,23 @@ export type SessionResult =
   | { status: "not_anonymous" }
   | { status: "error" };
 
+/**
+ * One session lookup at a time for the whole page: calls made while one is
+ * in progress share it, so two quick taps (or React running an effect twice
+ * in development) can never create two anonymous users. A failed lookup is
+ * forgotten, so a later, deliberate attempt can try again.
+ */
+export function sharedSession(auth: AnonymousAuth): () => Promise<SessionResult> {
+  let pending: Promise<SessionResult> | null = null;
+  return () => {
+    pending ??= ensureAnonymousSession(auth).then((result) => {
+      if (result.status !== "ok") pending = null;
+      return result;
+    });
+    return pending;
+  };
+}
+
 export async function ensureAnonymousSession(auth: AnonymousAuth): Promise<SessionResult> {
   try {
     const current = await auth.getSession();

@@ -62,6 +62,13 @@ export interface Strings {
   friendCodeLabel: string;
   friendJoinButton: string;
   invalidCode: string;
+  // Play with a friend: creating a game
+  /** This build has no Supabase settings. */
+  friendUnavailable: string;
+  friendError: string;
+  tryAgain: string;
+  /** After "Send the link instead" copied the link (no share sheet). */
+  linkCopied: string;
 
   // Brief §4
   robots: Record<Level, Robot>;
@@ -146,6 +153,10 @@ const en: Strings = {
   friendCodeLabel: "Your friend's code",
   friendJoinButton: "Join",
   invalidCode: "That code doesn't work — check it and try again",
+  friendUnavailable: "Playing with a friend isn't available right now",
+  friendError: "Something went wrong — check your connection and try again",
+  tryAgain: "Try again",
+  linkCopied: "Link copied",
 
   robots: {
     1: { name: "Snoozy", tagline: "Just woke up", vsName: "Snoozy" },
@@ -242,6 +253,10 @@ const es: Strings = {
   friendCodeLabel: "El código de tu amigo",
   friendJoinButton: "Unirse",
   invalidCode: "Ese código no funciona — revísalo e inténtalo otra vez",
+  friendUnavailable: "Jugar con un amigo no está disponible ahora",
+  friendError: "Algo ha fallado — revisa la conexión e inténtalo otra vez",
+  tryAgain: "Intentar de nuevo",
+  linkCopied: "Enlace copiado",
 
   robots: {
     1: { name: "Dormilón", tagline: "Recién despertado", vsName: "Dormilón" },
@@ -338,6 +353,10 @@ const ru: Strings = {
   friendCodeLabel: "Код друга",
   friendJoinButton: "Войти",
   invalidCode: "Этот код не подходит — проверь и попробуй ещё раз",
+  friendUnavailable: "Игра с другом сейчас недоступна",
+  friendError: "Что-то пошло не так — проверь интернет и попробуй ещё раз",
+  tryAgain: "Попробовать ещё раз",
+  linkCopied: "Ссылка скопирована",
 
   robots: {
     1: { name: "Соня", tagline: "Только проснулся", vsName: "Сони" },

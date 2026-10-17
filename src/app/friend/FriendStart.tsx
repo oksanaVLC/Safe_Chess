@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { BackIcon } from "@/components/icons";
 import { isJoinCodeStart, JOIN_CODE_LENGTH, normalizeJoinCode } from "@/friend/joinCode";
+import { friendModeConfigured } from "@/friend/supabaseClient";
 import { useLanguage } from "@/i18n/language";
 import styles from "./FriendStart.module.css";
 
 // Play with a friend, first screen: create a game (you play White) or join
-// one with a code (you play Black). Nothing here talks to the server yet:
-// both actions are wired in the next steps, so their buttons stay disabled.
+// one with a code (you play Black). Joining is wired in the next step, so
+// its button stays disabled for now.
 export function FriendStart() {
   const { t } = useLanguage();
   const [code, setCode] = useState("");
@@ -27,10 +28,17 @@ export function FriendStart() {
         <h1 className={styles.title}>{t.friend}</h1>
       </header>
 
-      <button type="button" className={styles.create} disabled>
-        <span className={styles.createTitle}>{t.friendCreate}</span>
-        <span className={styles.createSub}>{t.friendCreateSub}</span>
-      </button>
+      {friendModeConfigured ? (
+        <Link href="/friend/create" className={styles.create}>
+          <span className={styles.createTitle}>{t.friendCreate}</span>
+          <span className={styles.createSub}>{t.friendCreateSub}</span>
+        </Link>
+      ) : (
+        <button type="button" className={styles.create} disabled>
+          <span className={styles.createTitle}>{t.friendCreate}</span>
+          <span className={styles.createSub}>{t.friendUnavailable}</span>
+        </button>
+      )}
 
       <form className={styles.card} onSubmit={(e) => e.preventDefault()}>
         <h2 className={styles.cardTitle}>{t.friendJoin}</h2>

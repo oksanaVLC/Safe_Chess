@@ -48,6 +48,7 @@
   gap: 4px;
   cursor: pointer;
   touch-action: manipulation;
+  text-decoration: none;
 }
 
 .createTitle {
