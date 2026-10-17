@@ -69,6 +69,11 @@ export interface Strings {
   tryAgain: string;
   /** After "Send the link instead" copied the link (no share sheet). */
   linkCopied: string;
+  // Play with a friend: joining
+  joined: string;
+  joinExpired: string;
+  joinOwnGame: string;
+  joinUnavailable: string;
 
   // Brief §4
   robots: Record<Level, Robot>;
@@ -157,6 +162,10 @@ const en: Strings = {
   friendError: "Something went wrong — check your connection and try again",
   tryAgain: "Try again",
   linkCopied: "Link copied",
+  joined: "You're in! You play Black",
+  joinExpired: "This game has expired — ask your friend for a new code",
+  joinOwnGame: "This is your own game — send the code to a friend",
+  joinUnavailable: "Someone else is already playing this game",
 
   robots: {
     1: { name: "Snoozy", tagline: "Just woke up", vsName: "Snoozy" },
@@ -257,6 +266,10 @@ const es: Strings = {
   friendError: "Algo ha fallado — revisa la conexión e inténtalo otra vez",
   tryAgain: "Intentar de nuevo",
   linkCopied: "Enlace copiado",
+  joined: "¡Ya estás dentro! Juegas con negras",
+  joinExpired: "Esta partida ha caducado — pide a tu amigo un código nuevo",
+  joinOwnGame: "Esta partida es tuya — envía el código a un amigo",
+  joinUnavailable: "Otra persona ya está jugando esta partida",
 
   robots: {
     1: { name: "Dormilón", tagline: "Recién despertado", vsName: "Dormilón" },
@@ -357,6 +370,10 @@ const ru: Strings = {
   friendError: "Что-то пошло не так — проверь интернет и попробуй ещё раз",
   tryAgain: "Попробовать ещё раз",
   linkCopied: "Ссылка скопирована",
+  joined: "Ты в игре! Ты играешь чёрными",
+  joinExpired: "Эта игра больше не действует — попроси у друга новый код",
+  joinOwnGame: "Это твоя игра — отправь код другу",
+  joinUnavailable: "В эту игру уже играет кто-то другой",
 
   robots: {
     1: { name: "Соня", tagline: "Только проснулся", vsName: "Сони" },

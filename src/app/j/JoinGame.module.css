@@ -1,0 +1,112 @@
+.screen {
+  min-height: 100dvh;
+  padding: 20px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+}
+
+.back {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--white);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--navy);
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.code {
+  margin: 24px 0 0;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.message {
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: var(--muted-bg);
+  text-align: center;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.ok {
+  background: var(--green-pill);
+}
+
+.action {
+  height: 68px;
+  border: none;
+  border-radius: 26px;
+  background: var(--navy);
+  box-shadow: 0 5px 0 var(--navy-dark);
+  color: var(--white);
+  font-size: 21px;
+  font-weight: 900;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.waiting {
+  align-self: center;
+  margin: 24px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid var(--green);
+  border-right-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
+
+.back:focus-visible,
+.action:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+}

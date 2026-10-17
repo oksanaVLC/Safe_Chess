@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { sharedSession, type AnonymousAuth } from "./anonymousSession";
-import { cancelFriendGame, createFriendGame, displayJoinCode, joinLink, type Rpc } from "./friendApi";
+import { cancelFriendGame, createFriendGame, displayJoinCode, joinFriendGame, joinLink, type Rpc } from "./friendApi";
 
 const GAME = "aaaaaaaa-0000-4000-8000-000000000001";
 
@@ -28,6 +28,34 @@ describe("create_friend_game", () => {
       }),
     ]) {
       expect(await createFriendGame(rpc)).toEqual({ status: "error" });
+    }
+  });
+});
+
+describe("join_friend_game", () => {
+  it("returns the game on 'ok' (also when an already seated player joins again)", async () => {
+    const rpc = rpcReturning([{ result: "ok", game_id: GAME }]);
+    expect(await joinFriendGame(rpc, "ABCDEFGH")).toEqual({ status: "ok", gameId: GAME });
+    expect(rpc).toHaveBeenCalledWith("join_friend_game", { p_code: "ABCDEFGH" });
+  });
+
+  it("passes on each refusal the server can give", async () => {
+    for (const result of ["invalid", "expired", "own_game", "unavailable"] as const) {
+      expect(await joinFriendGame(rpcReturning([{ result, game_id: null }]), "ABCDEFGH")).toEqual({ status: result });
+    }
+  });
+
+  it("treats anything else as an error", async () => {
+    for (const rpc of [
+      rpcReturning(null, { code: "PGRST301" }),
+      rpcReturning([]),
+      rpcReturning([{ result: "ok", game_id: null }]),
+      rpcReturning([{ result: "joined", game_id: GAME }]),
+      vi.fn<Rpc>(async () => {
+        throw new Error("offline");
+      }),
+    ]) {
+      expect(await joinFriendGame(rpc, "ABCDEFGH")).toEqual({ status: "error" });
     }
   });
 });

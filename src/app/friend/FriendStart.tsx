@@ -1,22 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BackIcon } from "@/components/icons";
-import { isJoinCodeStart, JOIN_CODE_LENGTH, normalizeJoinCode } from "@/friend/joinCode";
+import { isJoinCode, isJoinCodeStart, JOIN_CODE_LENGTH, normalizeJoinCode } from "@/friend/joinCode";
 import { friendModeConfigured } from "@/friend/supabaseClient";
 import { useLanguage } from "@/i18n/language";
 import styles from "./FriendStart.module.css";
 
 // Play with a friend, first screen: create a game (you play White) or join
-// one with a code (you play Black). Joining is wired in the next step, so
-// its button stays disabled for now.
+// one with a code (you play Black). A complete code opens /j?c=CODE, the
+// same page the QR code and the shared link lead to.
 export function FriendStart() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [code, setCode] = useState("");
   const normalized = normalizeJoinCode(code);
   // complain only once the text can no longer become a valid code
   const wrong = !isJoinCodeStart(normalized);
+  const canJoin = friendModeConfigured && isJoinCode(normalized);
 
   return (
     <main className={styles.screen}>
@@ -40,7 +43,13 @@ export function FriendStart() {
         </button>
       )}
 
-      <form className={styles.card} onSubmit={(e) => e.preventDefault()}>
+      <form
+        className={styles.card}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canJoin) router.push(`/j?c=${normalized}`);
+        }}
+      >
         <h2 className={styles.cardTitle}>{t.friendJoin}</h2>
         <p className={styles.cardSub}>{t.friendJoinSub}</p>
         <label className={styles.label} htmlFor="join-code">
@@ -64,7 +73,7 @@ export function FriendStart() {
         <p id="join-code-error" className={styles.error} role="alert">
           {wrong ? t.invalidCode : ""}
         </p>
-        <button type="submit" className={styles.join} disabled>
+        <button type="submit" className={styles.join} disabled={!canJoin}>
           {t.friendJoinButton}
         </button>
       </form>

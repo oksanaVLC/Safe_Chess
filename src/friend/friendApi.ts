@@ -29,6 +29,31 @@ export async function createFriendGame(rpc: Rpc): Promise<CreateResult> {
   }
 }
 
+export type JoinResult =
+  | { status: "ok"; gameId: string }
+  | { status: "invalid" | "expired" | "own_game" | "unavailable" | "error" };
+
+/**
+ * join_friend_game: takes Black in the game with this code. Safe to call
+ * again: a player already seated in the game gets "ok" with the same game.
+ */
+export async function joinFriendGame(rpc: Rpc, code: string): Promise<JoinResult> {
+  try {
+    const { data, error } = await rpc("join_friend_game", { p_code: code });
+    const row = Array.isArray(data) ? (data[0] as { result?: unknown; game_id?: unknown } | undefined) : undefined;
+    if (error || !row) return { status: "error" };
+    if (row.result === "ok") {
+      return typeof row.game_id === "string" ? { status: "ok", gameId: row.game_id } : { status: "error" };
+    }
+    if (row.result === "invalid" || row.result === "expired" || row.result === "own_game" || row.result === "unavailable") {
+      return { status: row.result };
+    }
+    return { status: "error" };
+  } catch {
+    return { status: "error" };
+  }
+}
+
 export type CancelResult = "cancelled" | "already_joined" | "ended" | "not_found" | "error";
 
 /** cancel_friend_game: deletes the caller's own game only while it is waiting. */
