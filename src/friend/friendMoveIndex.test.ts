@@ -30,7 +30,7 @@ const NEW_KEYS = {
   SUPABASE_PUBLISHABLE_KEYS: JSON.stringify({ default: PUBLISHABLE }),
   SUPABASE_SECRET_KEYS: JSON.stringify({ default: SB_SECRET }),
 };
-// modern keys plus the legacy service_role JWT the write needs
+// modern keys plus a valid legacy service_role JWT (ignored: the modern secret wins)
 const NEW_KEYS_AND_JWT = { ...NEW_KEYS, SUPABASE_SERVICE_ROLE_KEY: LEGACY_SERVICE };
 const LEGACY_KEYS = {
   SUPABASE_URL: SUPABASE,
@@ -79,11 +79,14 @@ const fakeFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (url === `${SUPABASE}/rest/v1/rpc/apply_friend_move`) {
     // gateway: a known API key; an sb_ key is never a valid Bearer token
     if (headers.authorization?.startsWith("Bearer sb_")) return reply(401, { message: "Invalid JWT" });
-    if (headers.apikey !== SB_SECRET && headers.apikey !== LEGACY_SERVICE) return reply(401, { message: "Invalid API key" });
-    // apply_friend_move check A: needs the service_role JWT
-    if (headers.authorization !== `Bearer ${LEGACY_SERVICE}`) {
-      return reply(400, { code: "P0001", message: "apply_friend_move: forbidden" });
-    }
+    if (![SB_SECRET, LEGACY_SERVICE, PUBLISHABLE].includes(headers.apikey)) return reply(401, { message: "Invalid API key" });
+    // the role Postgres sees: the Bearer JWT's, else the API key's (a secret
+    // key becomes a service_role JWT; a publishable key an anon one)
+    const role = headers.authorization
+      ? headers.authorization === `Bearer ${LEGACY_SERVICE}` ? "service_role" : "other"
+      : headers.apikey === SB_SECRET ? "service_role" : "anon";
+    // apply_friend_move check A: the role must be service_role
+    if (role !== "service_role") return reply(400, { code: "P0001", message: "apply_friend_move: forbidden" });
     return reply(200, [{ result: "ok", game: { ...row(), moves: ["e2e4"], version: 2 } }]);
   }
   return reply(599, { error: "unexpected URL in test" });
@@ -178,18 +181,30 @@ describe("friend-move index.ts (real file, fake Deno and fetch)", () => {
     const { res } = await call(withoutSecret);
     expect(res.status).toBe(500);
     expect(rpcCalls()).toHaveLength(0);
-    expect(logs).toEqual(["friend-move: SUPABASE_SERVICE_ROLE_KEY is missing: apply_friend_move needs a service_role JWT"]);
+    expect(logs).toEqual(["friend-move: SUPABASE_SECRET_KEYS and SUPABASE_SERVICE_ROLE_KEY are both missing"]);
   });
 
-  it("fails closed with modern keys only: an sb_secret_ key is never used as the JWT", async () => {
-    const { res } = await call(NEW_KEYS);
-    expect(res.status).toBe(500);
-    expect(rpcCalls()).toHaveLength(0);
-    expect(logs).toEqual(["friend-move: SUPABASE_SERVICE_ROLE_KEY is missing: apply_friend_move needs a service_role JWT"]);
+  it("writes with modern keys only: the sb_secret_ key in apikey, no Authorization", async () => {
+    const { res, data } = await call(NEW_KEYS);
+    expect([res.status, data?.result]).toEqual([200, "ok"]);
+    const [rpc] = rpcCalls();
+    expect(rpc.headers.apikey).toBe(SB_SECRET);
+    expect("authorization" in rpc.headers).toBe(false);
+    expect(logs).toEqual([]);
   });
 
-  it("fails closed when SUPABASE_SERVICE_ROLE_KEY holds an sb_secret_ key instead of a JWT", async () => {
-    const { res } = await call({ ...NEW_KEYS, SUPABASE_SERVICE_ROLE_KEY: SB_SECRET });
+  it("writes when SUPABASE_SERVICE_ROLE_KEY is not a JWT but a modern secret exists (as in the live project)", async () => {
+    const { res, data } = await call({ ...NEW_KEYS, SUPABASE_SERVICE_ROLE_KEY: SB_SECRET });
+    expect([res.status, data?.result]).toEqual([200, "ok"]);
+    expect(rpcCalls()[0].headers.apikey).toBe(SB_SECRET);
+    expect("authorization" in rpcCalls()[0].headers).toBe(false);
+    expect(logs).toEqual([]);
+  });
+
+  it("fails closed when the only server key is a legacy variable that is not a JWT", async () => {
+    const { SUPABASE_SECRET_KEYS: _omit, ...withoutSecret } = NEW_KEYS;
+    void _omit;
+    const { res } = await call({ ...withoutSecret, SUPABASE_SERVICE_ROLE_KEY: SB_SECRET });
     expect(res.status).toBe(500);
     expect(rpcCalls()).toHaveLength(0);
     expect(logs).toEqual(["friend-move: SUPABASE_SERVICE_ROLE_KEY is not a JWT"]);
@@ -206,11 +221,12 @@ describe("friend-move index.ts (real file, fake Deno and fetch)", () => {
     expect(logs).toEqual(['friend-move: SUPABASE_SECRET_KEYS has no "default" key']);
   });
 
-  it("sends the modern secret as apikey and the service_role JWT as Authorization", async () => {
+  it("prefers the modern secret over a valid legacy JWT, and sends no Authorization with it", async () => {
     const { res, data } = await call(NEW_KEYS_AND_JWT);
     expect([res.status, data?.result]).toEqual([200, "ok"]);
     const [rpc] = rpcCalls();
-    expect(rpc.headers).toMatchObject({ apikey: SB_SECRET, authorization: `Bearer ${LEGACY_SERVICE}` });
+    expect(rpc.headers.apikey).toBe(SB_SECRET);
+    expect("authorization" in rpc.headers).toBe(false);
     expect(calls[0].headers).toMatchObject({ apikey: PUBLISHABLE, authorization: `Bearer ${TOKEN}` });
     expect(logs).toEqual([]);
   });

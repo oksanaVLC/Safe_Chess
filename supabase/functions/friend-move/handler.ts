@@ -17,7 +17,7 @@ export interface FriendMoveDeps {
   supabaseUrl: string;
   /** Publishable key (or the legacy anon key): used with the caller's own token. */
   anonKey: string;
-  /** API key + service_role JWT for the write; looked up only right before it (step 8). */
+  /** Server credentials for the write; looked up only right before it (step 8). */
   serverCredentials: () => ServerCredentials;
   allowedOrigins: readonly string[];
   fetch: typeof fetch;
@@ -44,8 +44,13 @@ interface GameRow {
 
 export type KeyLookup = { key: string } | { error: string };
 
-/** What the write needs: an API key for the gateway and a service_role JWT for Postgres. */
-export type ServerCredentials = { apikey: string; jwt: string } | { error: string };
+/**
+ * What the write sends: the apikey header, and a JWT for Authorization or
+ * null for none. A modern secret key goes in apikey only: the gateway turns
+ * it into a short-lived service_role JWT. A legacy service_role JWT goes in
+ * both headers.
+ */
+export type ServerCredentials = { apikey: string; jwt: string | null } | { error: string };
 
 /**
  * The function's own credentials, from the Edge Function environment.
@@ -54,15 +59,18 @@ export type ServerCredentials = { apikey: string; jwt: string } | { error: strin
  * of SUPABASE_PUBLISHABLE_KEYS, or SUPABASE_ANON_KEY when that variable is
  * absent, empty or "{}".
  *
- * Server credentials (the one write, apply_friend_move): its check A needs
- * auth.jwt()->>'role' = 'service_role', so Authorization must carry a JWT
- * whose role is service_role. A modern sb_secret_ key is not a JWT and is
- * never sent as one. The only service_role JWT the runtime provides is the
- * legacy SUPABASE_SERVICE_ROLE_KEY, so it is required: missing, not a JWT,
- * another role or expired is a configuration error and nothing is written.
- * The API key (apikey header) is the "default" entry of SUPABASE_SECRET_KEYS
- * when that variable is present, else the same JWT; a present but unusable
- * SUPABASE_SECRET_KEYS is also a configuration error.
+ * Server credentials (the one write, apply_friend_move, whose check A needs
+ * auth.jwt()->>'role' = 'service_role'):
+ *  - SUPABASE_SECRET_KEYS present: its "default" entry, which must be an
+ *    sb_secret_ key, sent as apikey with no Authorization header. A present
+ *    but unusable SUPABASE_SECRET_KEYS is a configuration error: nothing is
+ *    written and the legacy key is not tried instead.
+ *  - SUPABASE_SECRET_KEYS absent, empty or "{}": the legacy
+ *    SUPABASE_SERVICE_ROLE_KEY, accepted only as an unexpired service_role
+ *    JWT, sent in both headers.
+ *  - neither: a configuration error, nothing is written.
+ * Whatever the key, check A in the database still refuses any caller whose
+ * role is not service_role, so a wrong key fails closed there too.
  *
  * Errors name variables only, never a value. Nothing is read until called,
  * so the server credentials are read only at the write.
@@ -76,15 +84,17 @@ export function apiKeysFrom(get: (name: string) => string | undefined, now: () =
       return legacy ? { key: legacy } : { error: "SUPABASE_PUBLISHABLE_KEYS and SUPABASE_ANON_KEY are both missing" };
     },
     server: (): ServerCredentials => {
-      const jwt = serviceRoleJwt(get("SUPABASE_SERVICE_ROLE_KEY"), now());
-      if ("error" in jwt) return jwt;
-      let apikey = jwt.key;
       const secret = namedKey(get, "SUPABASE_SECRET_KEYS");
       if (secret !== null) {
         if ("error" in secret) return secret;
-        apikey = secret.key;
+        if (!secret.key.startsWith("sb_secret_")) {
+          return { error: 'SUPABASE_SECRET_KEYS "default" is not an sb_secret_ key' };
+        }
+        return { apikey: secret.key, jwt: null };
       }
-      return { apikey, jwt: jwt.key };
+      const jwt = serviceRoleJwt(get("SUPABASE_SERVICE_ROLE_KEY"), now());
+      if ("error" in jwt) return jwt;
+      return { apikey: jwt.key, jwt: jwt.key };
     },
   };
 }
@@ -114,14 +124,15 @@ function namedKey(get: (name: string) => string | undefined, newVar: string): Ke
 const JWT_RE = /^[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$/;
 
 /**
- * SUPABASE_SERVICE_ROLE_KEY, accepted only if it is shaped like a JWT whose
- * payload has role "service_role" and is not expired. The signature is not
- * checked here (PostgREST verifies it); the payload is only inspected, never
- * logged or returned.
+ * SUPABASE_SERVICE_ROLE_KEY (used only when there is no modern secret key),
+ * accepted only if it is shaped like a JWT whose payload has role
+ * "service_role" and is not expired. The signature is not checked here
+ * (PostgREST verifies it); the payload is only inspected, never logged or
+ * returned.
  */
 function serviceRoleJwt(value: string | undefined, nowMs: number): KeyLookup {
   const name = "SUPABASE_SERVICE_ROLE_KEY";
-  if (!value) return { error: `${name} is missing: apply_friend_move needs a service_role JWT` };
+  if (!value) return { error: `SUPABASE_SECRET_KEYS and ${name} are both missing` };
   const payload = JWT_RE.exec(value)?.[1];
   let claims: unknown = null;
   if (payload) {
@@ -369,8 +380,8 @@ export async function handleFriendMove(req: Request, deps: FriendMoveDeps): Prom
   const { endReason, winner } = outcome(chess);
 
   // 8. The single atomic write, as service_role (credentials read only
-  //    here): an API key for the gateway, and the service_role JWT in
-  //    Authorization, whose role claim apply_friend_move's check A requires
+  //    here): a modern secret key in apikey alone, or the legacy
+  //    service_role JWT in both headers (see apiKeysFrom)
   const creds = deps.serverCredentials();
   if ("error" in creds) {
     console.error(`friend-move: ${creds.error}`); // variable names only
@@ -382,7 +393,7 @@ export async function handleFriendMove(req: Request, deps: FriendMoveDeps): Prom
       method: "POST",
       headers: {
         apikey: creds.apikey,
-        authorization: `Bearer ${creds.jwt}`,
+        ...(creds.jwt === null ? {} : { authorization: `Bearer ${creds.jwt}` }),
         "content-type": "application/json",
         accept: "application/json",
       },

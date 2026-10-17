@@ -115,9 +115,14 @@ function fakeSupabase(rows: Row[], opts: FakeOptions = {}) {
     if (url === `${SUPABASE}/rest/v1/rpc/apply_friend_move`) {
       // gateway: a known API key; an sb_ key is never a valid Bearer token
       if (headers.authorization?.startsWith("Bearer sb_")) return reply(401, { message: "Invalid JWT" });
-      if (headers.apikey !== SERVICE && headers.apikey !== SB_SECRET) return reply(401, INVALID_API_KEY);
-      // apply_friend_move check A: the JWT's role must be service_role
-      if (token !== SERVICE) return reply(400, { code: "P0001", message: "apply_friend_move: forbidden" });
+      if (![SERVICE, SB_SECRET, ANON].includes(headers.apikey)) return reply(401, INVALID_API_KEY);
+      // the role Postgres sees: the Bearer JWT's, else the API key's (the
+      // gateway turns a secret key into a service_role JWT and a publishable
+      // key into an anon one; that mapping is what the live test confirms)
+      const role = token ? (token === SERVICE ? "service_role" : "other")
+        : headers.apikey === SB_SECRET ? "service_role" : "anon";
+      // apply_friend_move check A: the role must be service_role
+      if (role !== "service_role") return reply(400, { code: "P0001", message: "apply_friend_move: forbidden" });
       const p = JSON.parse(body ?? "{}") as Record<string, unknown>;
       if (opts.rpc) return reply(200, opts.rpc(p));
       const o = rows.find((r) => r.id === p.p_game);
@@ -587,8 +592,8 @@ describe("friend-move versions (design §J)", () => {
 
 // ---------------------------------------------------------------------
 // Credentials from the Edge Function environment: the publishable key for
-// the player's calls; for the write, a service_role JWT (required) plus an
-// API key (modern sb_secret_ when present, else the same JWT)
+// the player's calls; for the write, the modern sb_secret_ key in apikey
+// only, else the legacy service_role JWT in both headers
 
 function fakeEnv(vars: Record<string, string>) {
   const reads: string[] = [];
@@ -619,11 +624,16 @@ describe("friend-move credentials", () => {
     });
   });
 
-  it("uses the modern secret as API key and the service_role JWT in Authorization", () => {
-    const keys = apiKeysFrom(
-      fakeEnv({ SUPABASE_SECRET_KEYS: JSON.stringify({ default: SB_SECRET }), SUPABASE_SERVICE_ROLE_KEY: SERVICE }).get,
-    );
-    expect(keys.server()).toEqual({ apikey: SB_SECRET, jwt: SERVICE });
+  it("uses the modern secret alone, in apikey, with no JWT", () => {
+    const modern = { SUPABASE_SECRET_KEYS: JSON.stringify({ default: SB_SECRET }) };
+    // the legacy variable is ignored whatever it holds (in the live project it is not a JWT)
+    for (const legacy of [undefined, SERVICE, "sb_secret_TESTONLY-in-legacy-var", "not-a-jwt"]) {
+      const vars: Record<string, string> = { ...modern };
+      if (legacy !== undefined) vars.SUPABASE_SERVICE_ROLE_KEY = legacy;
+      const env = fakeEnv(vars);
+      expect(apiKeysFrom(env.get).server(), String(legacy)).toEqual({ apikey: SB_SECRET, jwt: null });
+      expect(env.reads).toEqual(["SUPABASE_SECRET_KEYS"]);
+    }
   });
 
   it("uses the legacy JWT for both when there is no modern secret", () => {
@@ -634,12 +644,17 @@ describe("friend-move credentials", () => {
     }
   });
 
-  it("fails closed without a service_role JWT, even with a valid modern secret", () => {
-    const keys = apiKeysFrom(fakeEnv({ SUPABASE_SECRET_KEYS: JSON.stringify({ default: SB_SECRET }) }).get);
-    expect(keys.server()).toEqual({ error: "SUPABASE_SERVICE_ROLE_KEY is missing: apply_friend_move needs a service_role JWT" });
+  it("fails closed when neither a modern secret nor a legacy JWT is configured", () => {
+    for (const value of [undefined, "", "{}"]) {
+      const vars: Record<string, string> = {};
+      if (value !== undefined) vars.SUPABASE_SECRET_KEYS = value;
+      expect(apiKeysFrom(fakeEnv(vars).get).server(), JSON.stringify(value)).toEqual({
+        error: "SUPABASE_SECRET_KEYS and SUPABASE_SERVICE_ROLE_KEY are both missing",
+      });
+    }
   });
 
-  it("never accepts something other than an unexpired service_role JWT as the JWT", () => {
+  it("never accepts something other than an unexpired service_role JWT as the legacy key", () => {
     const cases: [string, string][] = [
       ["sb_secret_TESTONLY-VALUE-x", "is not a JWT"], // a modern key in the legacy variable
       ["not-a-jwt-VALUE", "is not a JWT"],
@@ -663,13 +678,20 @@ describe("friend-move credentials", () => {
       JSON.stringify({ backend: "sb_secret_VALUE-a", other: "sb_secret_VALUE-b" }),
       JSON.stringify({ default: 42 }),
       JSON.stringify({ default: "" }),
+      // a "default" entry that is not a secret key: never sent as the server key
+      JSON.stringify({ default: "sb_publishable_VALUE-p" }),
+      JSON.stringify({ default: fakeJwt({ role: "service_role", v: "VALUE" }) }),
+      JSON.stringify({ default: "VALUE-plain" }),
     ];
     for (const value of bad) {
+      // the legacy JWT is present and valid, and still not used instead
       const result = apiKeysFrom(fakeEnv({ SUPABASE_SECRET_KEYS: value, SUPABASE_SERVICE_ROLE_KEY: SERVICE }).get).server();
       expect("error" in result, value).toBe(true);
       expect(JSON.stringify(result), value).toContain("SUPABASE_SECRET_KEYS");
-      expect(JSON.stringify(result), value).not.toMatch(/VALUE|TESTONLY/);
+      expect(JSON.stringify(result), value).not.toMatch(/VALUE|TESTONLY|eyJ/);
     }
+    const notSecret = apiKeysFrom(fakeEnv({ SUPABASE_SECRET_KEYS: JSON.stringify({ default: "sb_publishable_VALUE" }) }).get);
+    expect(notSecret.server()).toEqual({ error: 'SUPABASE_SECRET_KEYS "default" is not an sb_secret_ key' });
   });
 
   /** The wiring of index.ts, with a recorded environment and the fake Supabase. */
@@ -687,6 +709,14 @@ describe("friend-move credentials", () => {
     SUPABASE_SECRET_KEYS: JSON.stringify({ default: SB_SECRET }),
     SUPABASE_SERVICE_ROLE_KEY: SERVICE,
   };
+  // what the live project showed (2026-10-17): modern keys, and a legacy
+  // variable that is not a JWT
+  const liveLike = {
+    SUPABASE_PUBLISHABLE_KEYS: JSON.stringify({ default: ANON }),
+    SUPABASE_SECRET_KEYS: JSON.stringify({ default: SB_SECRET }),
+    SUPABASE_SERVICE_ROLE_KEY: "sb_secret_TESTONLY-in-legacy-var",
+  };
+  const legacyOnly = { SUPABASE_ANON_KEY: ANON, SUPABASE_SERVICE_ROLE_KEY: SERVICE };
 
   async function captureErrors<T>(fn: () => Promise<T>): Promise<[T, unknown[][]]> {
     const errors: unknown[][] = [];
@@ -699,19 +729,29 @@ describe("friend-move credentials", () => {
     }
   }
 
-  it("writes with apikey = modern secret and Authorization = the service_role JWT", async () => {
-    const { fake, deps } = wired([game()], modernAndJwt);
+  it("writes with the modern secret in apikey and no Authorization header", async () => {
+    for (const vars of [modernAndJwt, liveLike]) {
+      const { fake, deps } = wired([game()], vars);
+      const res = await handleFriendMove(request(move("e2e4")), deps);
+      expect([res.status, (await res.json()).result]).toEqual([200, "ok"]);
+      const [rpc] = fake.rpcCalls();
+      expect(rpc.headers.apikey).toBe(SB_SECRET);
+      expect("authorization" in rpc.headers).toBe(false);
+      const [auth, read] = fake.calls;
+      expect(auth.headers).toMatchObject({ apikey: ANON, authorization: "Bearer token-white" });
+      expect(read.headers).toMatchObject({ apikey: ANON, authorization: "Bearer token-white" });
+    }
+  });
+
+  it("writes with the legacy service_role JWT in both headers when there is no modern secret", async () => {
+    const { fake, deps } = wired([game()], legacyOnly);
     const res = await handleFriendMove(request(move("e2e4")), deps);
     expect([res.status, (await res.json()).result]).toEqual([200, "ok"]);
-    const [rpc] = fake.rpcCalls();
-    expect(rpc.headers).toMatchObject({ apikey: SB_SECRET, authorization: `Bearer ${SERVICE}` });
-    const [auth, read] = fake.calls;
-    expect(auth.headers).toMatchObject({ apikey: ANON, authorization: "Bearer token-white" });
-    expect(read.headers).toMatchObject({ apikey: ANON, authorization: "Bearer token-white" });
+    expect(fake.rpcCalls()[0].headers).toMatchObject({ apikey: SERVICE, authorization: `Bearer ${SERVICE}` });
   });
 
   it("never sends an sb_ key as a Bearer token", async () => {
-    for (const vars of [modernAndJwt, { SUPABASE_ANON_KEY: ANON, SUPABASE_SERVICE_ROLE_KEY: SERVICE }]) {
+    for (const vars of [modernAndJwt, liveLike, legacyOnly]) {
       const { fake, deps } = wired([game()], vars);
       await handleFriendMove(request(move("e2e4")), deps);
       expect(fake.rpcCalls()).toHaveLength(1);
@@ -719,14 +759,24 @@ describe("friend-move credentials", () => {
     }
   });
 
-  it("fails closed, without calling the RPC, when only a modern secret is configured", async () => {
-    const { SUPABASE_SERVICE_ROLE_KEY: _omit, ...modernOnly } = modernAndJwt;
-    void _omit;
-    const { fake, deps } = wired([game()], modernOnly);
+  it("fails closed, without calling the RPC, when no server credential is configured", async () => {
+    const noServerKey: Record<string, string>[] = [{ SUPABASE_ANON_KEY: ANON }, { SUPABASE_ANON_KEY: ANON, SUPABASE_SECRET_KEYS: "{}" }];
+    for (const vars of noServerKey) {
+      const { fake, deps } = wired([game()], vars);
+      const [res, errors] = await captureErrors(() => handleFriendMove(request(move("e2e4")), deps));
+      expect([res.status, (await res.json()).result]).toEqual([500, "server_error"]);
+      expect(fake.rpcCalls()).toHaveLength(0);
+      expect(errors).toEqual([["friend-move: SUPABASE_SECRET_KEYS and SUPABASE_SERVICE_ROLE_KEY are both missing"]]);
+      expect(fake.rows[0].version).toBe(1);
+    }
+  });
+
+  it("fails closed, without calling the RPC, when only an invalid legacy key is configured", async () => {
+    const { fake, deps } = wired([game()], { SUPABASE_ANON_KEY: ANON, SUPABASE_SERVICE_ROLE_KEY: "sb_secret_TESTONLY-x" });
     const [res, errors] = await captureErrors(() => handleFriendMove(request(move("e2e4")), deps));
     expect([res.status, (await res.json()).result]).toEqual([500, "server_error"]);
     expect(fake.rpcCalls()).toHaveLength(0);
-    expect(errors).toEqual([["friend-move: SUPABASE_SERVICE_ROLE_KEY is missing: apply_friend_move needs a service_role JWT"]]);
+    expect(errors).toEqual([["friend-move: SUPABASE_SERVICE_ROLE_KEY is not a JWT"]]);
   });
 
   it("never reads a server credential before a valid move is ready to be written", async () => {
@@ -741,9 +791,12 @@ describe("friend-move credentials", () => {
       await handleFriendMove(request(body, { token }), deps);
       expect(env.reads.filter((n) => SERVER_VARS.includes(n)), JSON.stringify(body)).toEqual([]);
     }
-    const { env, deps } = wired([game()], modernAndJwt);
-    await handleFriendMove(request(move("e2e4")), deps);
-    expect(env.reads.filter((n) => SERVER_VARS.includes(n))).toEqual(["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEYS"]);
+    const modern = wired([game()], modernAndJwt);
+    await handleFriendMove(request(move("e2e4")), modern.deps);
+    expect(modern.env.reads.filter((n) => SERVER_VARS.includes(n))).toEqual(["SUPABASE_SECRET_KEYS"]);
+    const legacy = wired([game()], legacyOnly);
+    await handleFriendMove(request(move("e2e4")), legacy.deps);
+    expect(legacy.env.reads.filter((n) => SERVER_VARS.includes(n))).toEqual(["SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY"]);
   });
 
   it("answers 500 and writes nothing when SUPABASE_SECRET_KEYS is misconfigured", async () => {
@@ -758,12 +811,16 @@ describe("friend-move credentials", () => {
     expect(JSON.stringify(errors)).not.toMatch(/VALUE|sb_secret|TESTONLY/);
   });
 
-  it("is refused by the fake check A when the JWT is not sent (as apply_friend_move would)", async () => {
-    const fake = fakeSupabase([game()]);
-    const deps: FriendMoveDeps = { ...fake.deps, serverCredentials: () => ({ apikey: SB_SECRET, jwt: "" }) };
-    const [res] = await captureErrors(() => handleFriendMove(request(move("e2e4")), deps));
-    expect(res.status).toBe(500);
-    expect(fake.rows[0].version).toBe(1);
+  it("is refused by the fake check A when the write's role is not service_role (as apply_friend_move would)", async () => {
+    // a publishable key alone maps to anon; a non-service JWT keeps its own role
+    for (const creds of [{ apikey: ANON, jwt: null }, { apikey: SB_SECRET, jwt: fakeJwt({ role: "authenticated" }) }]) {
+      const fake = fakeSupabase([game()]);
+      const deps: FriendMoveDeps = { ...fake.deps, serverCredentials: () => creds };
+      const [res, errors] = await captureErrors(() => handleFriendMove(request(move("e2e4")), deps));
+      expect([res.status, (await res.json()).result]).toEqual([500, "server_error"]);
+      expect(errors).toEqual([["friend-move: apply_friend_move failed (HTTP 400)"]]);
+      expect(fake.rows[0].version).toBe(1);
+    }
   });
 });
 
