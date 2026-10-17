@@ -1,0 +1,39 @@
+// The player's anonymous session: no name, e-mail or account. It is reused
+// while it lasts (supabase-js keeps it in this browser), and a new one is
+// created only when there is none. Creating one makes an anonymous user in
+// the project, so it is attempted ONCE per call, never retried.
+
+/** The part of supabase-js's auth API this needs (a fake in the tests). */
+export interface AnonymousAuth {
+  getSession(): Promise<{
+    data: { session: { user: { id: string; is_anonymous?: boolean } } | null };
+    error: unknown;
+  }>;
+  signInAnonymously(): Promise<{
+    data: { user: { id: string; is_anonymous?: boolean } | null };
+    error: unknown;
+  }>;
+}
+
+export type SessionResult =
+  | { status: "ok"; userId: string; created: boolean }
+  /** A non-anonymous session is in this browser: friend mode will not use it. */
+  | { status: "not_anonymous" }
+  | { status: "error" };
+
+export async function ensureAnonymousSession(auth: AnonymousAuth): Promise<SessionResult> {
+  try {
+    const current = await auth.getSession();
+    if (current.error) return { status: "error" };
+    const user = current.data.session?.user;
+    if (user) {
+      return user.is_anonymous === true ? { status: "ok", userId: user.id, created: false } : { status: "not_anonymous" };
+    }
+    const created = await auth.signInAnonymously(); // once, never retried
+    const newUser = created.data.user;
+    if (created.error || !newUser || newUser.is_anonymous !== true) return { status: "error" };
+    return { status: "ok", userId: newUser.id, created: true };
+  } catch {
+    return { status: "error" };
+  }
+}
