@@ -44,4 +44,10 @@ describe("dictionaries", () => {
     expect(STRINGS.ru.robots[1].name).toBe("Соня");
     expect(STRINGS.es.robots[4].tagline).toBe("Rápido y astuto");
   });
+
+  it("use the invalid-code texts drafted in Step 4", () => {
+    expect(STRINGS.en.invalidCode).toBe("That code doesn't work — check it and try again");
+    expect(STRINGS.es.invalidCode).toBe("Ese código no funciona — revísalo e inténtalo otra vez");
+    expect(STRINGS.ru.invalidCode).toBe("Этот код не подходит — проверь и попробуй ещё раз");
+  });
 });

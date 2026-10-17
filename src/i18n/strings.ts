@@ -52,6 +52,17 @@ export interface Strings {
   blackCol: string;
   castles: string;
 
+  // Play with a friend: start screen
+  friendCreate: string;
+  /** The creator always plays White. */
+  friendCreateSub: string;
+  friendJoin: string;
+  /** The joiner always plays Black. */
+  friendJoinSub: string;
+  friendCodeLabel: string;
+  friendJoinButton: string;
+  invalidCode: string;
+
   // Brief §4
   robots: Record<Level, Robot>;
 
@@ -127,6 +138,14 @@ const en: Strings = {
   whiteCol: "White",
   blackCol: "Black",
   castles: "castles",
+
+  friendCreate: "Create a game",
+  friendCreateSub: "You play White",
+  friendJoin: "Join with a code",
+  friendJoinSub: "You play Black",
+  friendCodeLabel: "Your friend's code",
+  friendJoinButton: "Join",
+  invalidCode: "That code doesn't work — check it and try again",
 
   robots: {
     1: { name: "Snoozy", tagline: "Just woke up", vsName: "Snoozy" },
@@ -216,6 +235,14 @@ const es: Strings = {
   blackCol: "Negras",
   castles: "enroque",
 
+  friendCreate: "Crear partida",
+  friendCreateSub: "Juegas con blancas",
+  friendJoin: "Unirse con un código",
+  friendJoinSub: "Juegas con negras",
+  friendCodeLabel: "El código de tu amigo",
+  friendJoinButton: "Unirse",
+  invalidCode: "Ese código no funciona — revísalo e inténtalo otra vez",
+
   robots: {
     1: { name: "Dormilón", tagline: "Recién despertado", vsName: "Dormilón" },
     2: { name: "Blup", tagline: "Aprendiendo a mover", vsName: "Blup" },
@@ -303,6 +330,14 @@ const ru: Strings = {
   whiteCol: "Белые",
   blackCol: "Чёрные",
   castles: "рокировка",
+
+  friendCreate: "Создать игру",
+  friendCreateSub: "Ты играешь белыми",
+  friendJoin: "Войти по коду",
+  friendJoinSub: "Ты играешь чёрными",
+  friendCodeLabel: "Код друга",
+  friendJoinButton: "Войти",
+  invalidCode: "Этот код не подходит — проверь и попробуй ещё раз",
 
   robots: {
     1: { name: "Соня", tagline: "Только проснулся", vsName: "Сони" },

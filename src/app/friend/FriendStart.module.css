@@ -1,0 +1,153 @@
+.screen {
+  min-height: 100dvh;
+  padding: 20px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+}
+
+.back {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--white);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--navy);
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+/* Create a game: the navy card of the Home design */
+.create {
+  min-height: 96px;
+  padding: 16px 22px;
+  border: none;
+  border-radius: 26px;
+  background: var(--navy);
+  box-shadow: 0 5px 0 var(--navy-dark);
+  color: var(--white);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.createTitle {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.createSub {
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* Join with a code */
+.card {
+  padding: 20px;
+  border-radius: 26px;
+  background: var(--white);
+  border: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.cardSub {
+  margin: 4px 0 16px;
+  color: var(--muted-text);
+  font-size: 17px;
+}
+
+.label {
+  margin-bottom: 8px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.input {
+  width: 100%;
+  height: 60px;
+  padding: 0 16px;
+  border-radius: 18px;
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--navy);
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.input::placeholder {
+  color: var(--border);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--navy);
+}
+
+.inputWrong,
+.inputWrong:focus-visible {
+  border-color: #c0392b;
+}
+
+.error {
+  min-height: 24px;
+  margin: 8px 0 12px;
+  color: #a82a1f;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.join {
+  height: 64px;
+  border: none;
+  border-radius: 22px;
+  background: var(--green);
+  box-shadow: 0 5px 0 var(--green-dark);
+  color: var(--navy);
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.create:disabled,
+.join:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.back:focus-visible,
+.create:focus-visible,
+.join:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+}

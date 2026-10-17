@@ -18,6 +18,9 @@ export function StartPage() {
       <Link href="/robot" className={styles.button}>
         {t.robot}
       </Link>
+      <Link href="/friend" className={`${styles.button} ${styles.buttonFriend}`}>
+        {t.friend}
+      </Link>
     </main>
   );
 }

@@ -25,3 +25,10 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Play with a friend: the navy card of the Home design */
+.buttonFriend {
+  background: var(--navy);
+  box-shadow: 0 5px 0 var(--navy-dark);
+  color: var(--white);
+}
