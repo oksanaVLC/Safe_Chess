@@ -21,7 +21,10 @@ const deno = (globalThis as unknown as { Deno: DenoRuntime }).Deno;
 
 // Browser origins allowed to call this function. The production domain is
 // added here when it is known, before the production deploy.
-const ALLOWED_ORIGINS = ["http://localhost:3000"];
+// TEMPORARY (development only): http://amigo.localhost:3000 is a second
+// local origin, so a second player with their own browser storage can be
+// tested on the same machine. Remove it before publishing.
+const ALLOWED_ORIGINS = ["http://localhost:3000", "http://amigo.localhost:3000"];
 
 deno.serve((req) => {
   const supabaseUrl = deno.env.get("SUPABASE_URL");
