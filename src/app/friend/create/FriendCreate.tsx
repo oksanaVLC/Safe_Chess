@@ -5,14 +5,23 @@ import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackIcon } from "@/components/icons";
 import { cancelFriendGame, createFriendGame, displayJoinCode, joinLink } from "@/friend/friendApi";
-import { friendModeConfigured, friendSession, getSupabase, rpcOf } from "@/friend/supabaseClient";
+import { GameSync } from "@/friend/gameSync";
+import {
+  friendModeConfigured,
+  friendSession,
+  getSupabase,
+  readGame,
+  rpcOf,
+  subscribeToGame,
+} from "@/friend/supabaseClient";
 import { useLanguage } from "@/i18n/language";
 import styles from "./FriendCreate.module.css";
 
 // Play with a friend, creator's screen: the QR code and the typed code for
 // the friend, a share button and "Waiting for your friend…". The creator
-// always plays White (no colour picker). Going back cancels the game while
-// it is still waiting. Noticing that the friend joined comes in a later step.
+// always plays White (no colour picker). The game's channel tells when the
+// friend has joined; then the board opens. Going back cancels the game
+// while it is still waiting.
 
 type State =
   | { kind: "loading" }
@@ -27,6 +36,39 @@ export function FriendCreate() {
   const [copied, setCopied] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const started = useRef(false);
+  const sync = useRef<GameSync | null>(null);
+  const mounted = useRef(false);
+
+  const openGame = useCallback((gameId: string) => router.replace(`/friend/game?g=${gameId}`), [router]);
+
+  /** Watches the waiting game: once the friend has joined, opens the board. */
+  const watch = useCallback(
+    async (gameId: string) => {
+      const supabase = getSupabase();
+      if (!supabase) return;
+      const first = await readGame(supabase, gameId);
+      if (!mounted.current || first.kind !== "ok") return; // the code still works; only the auto-open is lost
+      if (first.game.status !== "waiting") return openGame(gameId);
+      sync.current?.dispose();
+      const s = new GameSync(
+        {
+          fetchGame: () => readGame(supabase, gameId),
+          subscribe: (onEvent, onStatus) => subscribeToGame(supabase, gameId, onEvent, onStatus),
+          onUpdate: (g) => {
+            if (g.status !== "waiting") openGame(gameId);
+          },
+          onGone: () => undefined,
+          onConnection: () => undefined,
+          setTimer: (fn, ms) => window.setTimeout(fn, ms),
+          clearTimer: (handle) => window.clearTimeout(handle as number),
+        },
+        first.game,
+      );
+      sync.current = s;
+      s.start();
+    },
+    [openGame],
+  );
 
   const create = useCallback(async () => {
     const supabase = getSupabase();
@@ -38,22 +80,33 @@ export function FriendCreate() {
     const game = await createFriendGame(rpcOf(supabase));
     if (game.status !== "ok") return setState({ kind: "error" });
     setState({ kind: "ready", gameId: game.gameId, code: game.code, link: joinLink(window.location.origin, game.code) });
-  }, []);
+    void watch(game.gameId);
+  }, [watch]);
 
   useEffect(() => {
+    mounted.current = true;
     // once per visit, even when React runs effects twice in development
-    if (started.current || !friendModeConfigured) return;
-    started.current = true;
-    void create();
+    if (!started.current && friendModeConfigured) {
+      started.current = true;
+      void create();
+    }
+    return () => {
+      mounted.current = false;
+    };
   }, [create]);
+
+  // leave the channel and stop polling when the screen goes away
+  useEffect(() => () => sync.current?.dispose(), []);
 
   async function leave() {
     if (leaving) return;
     setLeaving(true);
+    sync.current?.dispose();
     const supabase = getSupabase();
     if (state.kind === "ready" && supabase) {
       // deletes the game only while nobody has joined; one attempt
-      await cancelFriendGame(rpcOf(supabase), state.gameId);
+      const result = await cancelFriendGame(rpcOf(supabase), state.gameId);
+      if (result === "already_joined") return openGame(state.gameId); // the friend just arrived
     }
     router.push("/friend");
   }

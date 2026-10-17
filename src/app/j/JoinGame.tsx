@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackIcon } from "@/components/icons";
 import { displayJoinCode, joinFriendGame, type JoinResult } from "@/friend/friendApi";
@@ -12,7 +13,7 @@ import styles from "./JoinGame.module.css";
 // Joining a friend's game, from the QR code, the shared link or the code
 // typed on /friend: all of them arrive here as /j?c=CODE. The joiner
 // always plays Black. A code that cannot be valid never reaches the
-// server. Opening the game board comes in a later step.
+// server. Once joined, the game board opens.
 
 type State =
   | { kind: "loading" }
@@ -21,6 +22,7 @@ type State =
 
 export function JoinGame() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [state, setState] = useState<State>({ kind: "loading" });
   const started = useRef(false);
 
@@ -31,8 +33,10 @@ export function JoinGame() {
     const session = await friendSession(supabase);
     if (session.status !== "ok") return setState({ kind: "result", result: { status: "error" }, code });
     // safe to repeat: a player already seated gets "ok" with the same game
-    setState({ kind: "result", result: await joinFriendGame(rpcOf(supabase), code), code });
-  }, []);
+    const result = await joinFriendGame(rpcOf(supabase), code);
+    setState({ kind: "result", result, code });
+    if (result.status === "ok") router.replace(`/friend/game?g=${result.gameId}`);
+  }, [router]);
 
   // The code comes from the address (?c=), known only in the browser.
   const start = useCallback(async () => {

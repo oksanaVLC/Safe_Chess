@@ -1,0 +1,79 @@
+/* The rest of the screen uses the robot game's styles, so both look alike. */
+
+.info {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.code {
+  color: var(--muted-text);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.connection {
+  align-self: center;
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.notice {
+  margin: 0;
+  text-align: center;
+  color: #a82a1f;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.bottomBar {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  padding-bottom: 5px; /* room for the 3D shadow */
+}
+
+.problem {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.problemText {
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: var(--muted-bg);
+  text-align: center;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.action {
+  height: 68px;
+  border: none;
+  border-radius: 26px;
+  background: var(--navy);
+  box-shadow: 0 5px 0 var(--navy-dark);
+  color: var(--white);
+  font-size: 21px;
+  font-weight: 900;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.action:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+}

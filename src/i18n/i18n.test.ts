@@ -45,6 +45,14 @@ describe("dictionaries", () => {
     expect(STRINGS.es.robots[4].tagline).toBe("Rápido y astuto");
   });
 
+  it("have the friend game texts in all three languages", () => {
+    expect(STRINGS.en.friendWaitMove).toBe("Waiting for your friend's move…");
+    expect(STRINGS.es.friendWaitMove).toBe("Esperando la jugada de tu amigo…");
+    expect(STRINGS.ru.friendWaitMove).toBe("Ждём хода твоего друга…");
+    expect(STRINGS.es.friendLoss).toBe("Jaque mate — esta vez gana tu amigo");
+    expect(STRINGS.ru.gameUnavailable).toBe("Эта игра недоступна");
+  });
+
   it("use the invalid-code texts drafted in Step 4", () => {
     expect(STRINGS.en.invalidCode).toBe("That code doesn't work — check it and try again");
     expect(STRINGS.es.invalidCode).toBe("Ese código no funciona — revísalo e inténtalo otra vez");

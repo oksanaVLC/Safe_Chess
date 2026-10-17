@@ -1,19 +1,28 @@
 "use client";
 
-import type { SquareView } from "@/game/GameController";
+import type { Color, SquareView } from "@/game/GameController";
 import { useLanguage } from "@/i18n/language";
 import styles from "./Board.module.css";
 import { PieceGlyph } from "./PieceGlyph";
 
 type BoardProps =
-  | { squares: SquareView[]; onTap: (square: SquareView["square"]) => void; size?: "game" }
+  | {
+      squares: SquareView[];
+      onTap: (square: SquareView["square"]) => void;
+      size?: "game";
+      /** The side at the bottom ("b": squares come in h1 … a8 order). Default White. */
+      orientation?: Color;
+    }
   /** Display-only board (Game moves screen), 37 px squares. */
-  | { squares: SquareView[]; onTap?: undefined; size: "mini"; label: string };
+  | { squares: SquareView[]; onTap?: undefined; size: "mini"; label: string; orientation?: undefined };
 
 export function Board(props: BoardProps) {
   const { t } = useLanguage();
   const { squares, onTap } = props;
   const mini = props.size === "mini";
+  // Coordinates sit on the left column and the bottom row, whichever side is down.
+  const leftFile = props.orientation === "b" ? "h" : "a";
+  const bottomRank = props.orientation === "b" ? "8" : "1";
   return (
     <div className={`${styles.frame} ${mini ? styles.mini : ""}`}>
       <div
@@ -35,12 +44,12 @@ export function Board(props: BoardProps) {
               )}
               {sq.target === "move" && <span className={styles.dot} aria-hidden="true" />}
               {sq.target === "capture" && <span className={styles.ring} aria-hidden="true" />}
-              {sq.square[0] === "a" && (
+              {sq.square[0] === leftFile && (
                 <span className={`${styles.coord} ${styles.rank}`} aria-hidden="true">
                   {sq.square[1]}
                 </span>
               )}
-              {sq.square[1] === "1" && (
+              {sq.square[1] === bottomRank && (
                 <span className={`${styles.coord} ${styles.file}`} aria-hidden="true">
                   {sq.square[0]}
                 </span>

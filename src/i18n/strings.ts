@@ -74,6 +74,16 @@ export interface Strings {
   joinExpired: string;
   joinOwnGame: string;
   joinUnavailable: string;
+  // Play with a friend: the game
+  friendWaitMove: string;
+  friendLoss: string;
+  gameExpired: string;
+  sendingMove: string;
+  reconnecting: string;
+  /** Bad link, or a game this person cannot see. */
+  gameUnavailable: string;
+  /** Label before the game's code, e.g. "Code ABCD-EFGH". */
+  gameCode: string;
 
   // Brief §4
   robots: Record<Level, Robot>;
@@ -166,6 +176,13 @@ const en: Strings = {
   joinExpired: "This game has expired — ask your friend for a new code",
   joinOwnGame: "This is your own game — send the code to a friend",
   joinUnavailable: "Someone else is already playing this game",
+  friendWaitMove: "Waiting for your friend's move…",
+  friendLoss: "Checkmate — your friend wins this time",
+  gameExpired: "This game has expired",
+  sendingMove: "Sending your move…",
+  reconnecting: "Reconnecting…",
+  gameUnavailable: "This game isn't available",
+  gameCode: "Code",
 
   robots: {
     1: { name: "Snoozy", tagline: "Just woke up", vsName: "Snoozy" },
@@ -270,6 +287,13 @@ const es: Strings = {
   joinExpired: "Esta partida ha caducado — pide a tu amigo un código nuevo",
   joinOwnGame: "Esta partida es tuya — envía el código a un amigo",
   joinUnavailable: "Otra persona ya está jugando esta partida",
+  friendWaitMove: "Esperando la jugada de tu amigo…",
+  friendLoss: "Jaque mate — esta vez gana tu amigo",
+  gameExpired: "Esta partida ha caducado",
+  sendingMove: "Enviando tu jugada…",
+  reconnecting: "Reconectando…",
+  gameUnavailable: "Esta partida no está disponible",
+  gameCode: "Código",
 
   robots: {
     1: { name: "Dormilón", tagline: "Recién despertado", vsName: "Dormilón" },
@@ -374,6 +398,13 @@ const ru: Strings = {
   joinExpired: "Эта игра больше не действует — попроси у друга новый код",
   joinOwnGame: "Это твоя игра — отправь код другу",
   joinUnavailable: "В эту игру уже играет кто-то другой",
+  friendWaitMove: "Ждём хода твоего друга…",
+  friendLoss: "Мат — в этот раз побеждает твой друг",
+  gameExpired: "Время этой игры вышло",
+  sendingMove: "Отправляем твой ход…",
+  reconnecting: "Переподключаемся…",
+  gameUnavailable: "Эта игра недоступна",
+  gameCode: "Код",
 
   robots: {
     1: { name: "Соня", tagline: "Только проснулся", vsName: "Сони" },
