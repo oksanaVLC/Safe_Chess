@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Board } from "@/components/Board";
+import { GameMoves } from "@/components/GameMoves";
 import { positionSquares } from "@/game/GameController";
 import { orientSquares } from "./friendGame";
 
@@ -20,6 +21,28 @@ function render(orientation: "w" | "b") {
   }));
   return { labels, coords };
 }
+
+/** The coordinate letters/digits of the Game moves mini board, in display order. */
+function miniCoords(orientation?: "w" | "b") {
+  const html = renderToStaticMarkup(createElement(GameMoves, { history: [], subtitle: "x", onBack: () => {}, orientation }));
+  const start = html.indexOf('role="img"');
+  const grid = html.slice(start, html.indexOf("</div></div>", start));
+  return [...grid.matchAll(/aria-hidden="true">([a-h1-8])<\/span>/g)].map((m) => m[1]);
+}
+
+describe("Game moves mini board", () => {
+  it("keeps White at the bottom by default (robot games)", () => {
+    const c = miniCoords();
+    expect(c[0]).toBe("8");
+    expect(c.at(-1)).toBe("h");
+  });
+
+  it("turns for Black: rank 1 at the top, files h to a along the bottom", () => {
+    const c = miniCoords("b");
+    expect(c[0]).toBe("1");
+    expect(c.slice(-8)).toEqual(["h", "g", "f", "e", "d", "c", "b", "a"]);
+  });
+});
 
 describe("board orientation", () => {
   it("White at the bottom: a8 first, h1 last, ranks on the a-file, files on rank 1", () => {

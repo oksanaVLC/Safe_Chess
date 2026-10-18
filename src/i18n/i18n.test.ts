@@ -53,6 +53,12 @@ describe("dictionaries", () => {
     expect(STRINGS.ru.gameUnavailable).toBe("Эта игра недоступна");
   });
 
+  it("use the friend-left texts drafted in Step 4", () => {
+    expect(STRINGS.en.friendLeft).toBe("Your friend left the game");
+    expect(STRINGS.es.friendLeft).toBe("Tu amigo ha salido de la partida");
+    expect(STRINGS.ru.friendLeft).toBe("Твой друг вышел из игры");
+  });
+
   it("use the invalid-code texts drafted in Step 4", () => {
     expect(STRINGS.en.invalidCode).toBe("That code doesn't work — check it and try again");
     expect(STRINGS.es.invalidCode).toBe("Ese código no funciona — revísalo e inténtalo otra vez");

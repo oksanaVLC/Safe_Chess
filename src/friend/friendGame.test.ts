@@ -6,6 +6,7 @@ import {
   classifyMoveResponse,
   controllerFor,
   isGameId,
+  opponentPresent,
   orientSquares,
   outcomeFor,
   parseGameRow,
@@ -34,7 +35,7 @@ function row(moves: string[] = [], extra: Record<string, unknown> = {}) {
     version: 1 + moves.length,
     end_reason: null,
     winner: null,
-    expires_at: "2026-10-18T12:00:00Z",
+    expires_at: "2100-01-01T00:00:00Z",
     ...extra,
   };
 }
@@ -148,10 +149,41 @@ describe("the end of a game", () => {
     expect(canMove(expired, "b", controllerFor(expired, "b"), false)).toBe(false);
   });
 
+  it("shows an active game as expired as soon as its time is up, before the cleanup job", () => {
+    const expiresAt = Date.parse("2026-10-18T09:16:35Z");
+    const g = game(["e2e4"], { expires_at: "2026-10-18T09:16:35Z" });
+    const ctl = controllerFor(g, "b");
+    expect(outcomeFor(g, "b", ctl, expiresAt - 1)).toEqual({ kind: "playing", myTurn: true, check: false });
+    expect(canMove(g, "b", ctl, false, expiresAt - 1)).toBe(true);
+    expect(outcomeFor(g, "b", ctl, expiresAt)).toEqual({ kind: "expired" });
+    expect(canMove(g, "b", ctl, false, expiresAt)).toBe(false);
+    // a finished game stays finished, whatever the time
+    const done = game(FOOLS_MATE, { status: "finished", end_reason: "checkmate", winner: "b", expires_at: "2026-10-18T09:16:35Z" });
+    expect(outcomeFor(done, "b", controllerFor(done, "b"), expiresAt + 1)).toEqual({ kind: "win" });
+  });
+
+  it("reads expires_at when present, and rejects a malformed one", () => {
+    expect(game().expiresAt).toBe(Date.parse("2100-01-01T00:00:00Z"));
+    const { expires_at: _omit, ...withoutExpiry } = row();
+    void _omit;
+    expect(parseGameRow(withoutExpiry)?.expiresAt).toBeNull();
+    expect(parseGameRow({ ...row(), expires_at: "soon" })).toBeNull();
+  });
+
   it("keeps a waiting game unplayable", () => {
     const g = game([], { status: "waiting", black_id: null, version: 0 });
     expect(outcomeFor(g, "w", controllerFor(g, "w"))).toEqual({ kind: "waiting" });
     expect(canMove(g, "w", controllerFor(g, "w"), false)).toBe(false);
+  });
+});
+
+describe("friend presence", () => {
+  it("is true only when the other seat is in the channel's presence state", () => {
+    expect(opponentPresent({}, "w")).toBe(false);
+    expect(opponentPresent({ [WHITE]: [{ seat: "w" }] }, "w")).toBe(false); // only me
+    expect(opponentPresent({ [WHITE]: [{ seat: "w" }], [BLACK]: [{ seat: "b" }] }, "w")).toBe(true);
+    expect(opponentPresent({ [WHITE]: [{ seat: "w" }] }, "b")).toBe(true);
+    expect(opponentPresent({ x: [null, "b", { seat: "x" }] } as Record<string, unknown[]>, "w")).toBe(false);
   });
 });
 

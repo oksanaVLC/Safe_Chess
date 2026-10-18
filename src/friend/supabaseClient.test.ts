@@ -128,6 +128,40 @@ describe("the game channel", () => {
     expect(raw.removeChannel).toHaveBeenCalledWith(channel);
   });
 
+  it("with presence: keys it by player, announces only the seat once joined, and reports the state", async () => {
+    const { subscribeToGame } = await load();
+    const { supabase, raw, channel } = fakeSupabase();
+    const state = { me: [{ seat: "w" }], friend: [{ seat: "b" }] };
+    Object.assign(channel, { track: vi.fn(async () => "ok"), presenceState: vi.fn(() => state) });
+    const onChange = vi.fn();
+    const onStatus = vi.fn();
+    subscribeToGame(supabase, GAME, vi.fn(), onStatus, { key: "user-1", seat: "w", onChange });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(raw.channel).toHaveBeenCalledWith(`game:${GAME}`, { config: { private: true, presence: { key: "user-1" } } });
+    const track = (channel as unknown as { track: ReturnType<typeof vi.fn> }).track;
+    expect(track).not.toHaveBeenCalled(); // not before the channel is joined
+    const statusCb = channel.subscribe.mock.calls[0][0] as (s: string) => void;
+    statusCb("SUBSCRIBED");
+    expect(track).toHaveBeenCalledWith({ seat: "w" });
+    expect(onStatus).toHaveBeenCalledWith("SUBSCRIBED");
+    const presenceCall = channel.on.mock.calls.find((c) => c[0] === "presence");
+    expect(presenceCall?.[1]).toEqual({ event: "sync" });
+    (presenceCall?.[2] as () => void)();
+    expect(onChange).toHaveBeenCalledWith(state);
+  });
+
+  it("without presence, sends nothing on the channel", async () => {
+    const { subscribeToGame } = await load();
+    const { supabase, channel } = fakeSupabase();
+    const track = vi.fn();
+    Object.assign(channel, { track });
+    subscribeToGame(supabase, GAME, vi.fn(), vi.fn());
+    await new Promise((r) => setTimeout(r, 0));
+    (channel.subscribe.mock.calls[0][0] as (s: string) => void)("SUBSCRIBED");
+    expect(track).not.toHaveBeenCalled();
+    expect(channel.on.mock.calls.map((c) => c[0])).toEqual(["broadcast"]);
+  });
+
   it("does not join if the screen is left before the token is ready", async () => {
     const { subscribeToGame } = await load();
     const { supabase, raw, channel } = fakeSupabase();

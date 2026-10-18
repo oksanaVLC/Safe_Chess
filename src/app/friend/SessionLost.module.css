@@ -1,0 +1,60 @@
+.box {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.title {
+  margin: 0;
+  padding: 18px 20px 0;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.hint {
+  margin: 0 0 8px;
+  text-align: center;
+  color: var(--muted-text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.startOver,
+.home {
+  height: 64px;
+  border-radius: 24px;
+  font-size: 20px;
+  font-weight: 900;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.startOver {
+  border: none;
+  background: var(--navy);
+  box-shadow: 0 5px 0 var(--navy-dark);
+  color: var(--white);
+}
+
+.home {
+  border: 2px solid var(--border);
+  background: var(--white);
+  color: var(--navy);
+}
+
+.startOver:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.startOver:focus-visible,
+.home:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+}

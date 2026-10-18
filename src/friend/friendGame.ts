@@ -18,6 +18,8 @@ export interface FriendGame {
   version: number;
   endReason: "checkmate" | "stalemate" | "insufficient" | "repetition" | "fifty-move" | "expired" | null;
   winner: Color | null;
+  /** When the server stops accepting moves (ms since epoch), if the row says. */
+  expiresAt: number | null;
 }
 
 const STATUSES = ["waiting", "active", "finished", "expired"];
@@ -45,7 +47,8 @@ export function parseGameRow(value: unknown): FriendGame | null {
     typeof r.fen === "string" &&
     Number.isInteger(r.version) &&
     (r.end_reason === null || END_REASONS.includes(r.end_reason as string)) &&
-    (r.winner === null || r.winner === "w" || r.winner === "b");
+    (r.winner === null || r.winner === "w" || r.winner === "b") &&
+    (r.expires_at === undefined || (typeof r.expires_at === "string" && !Number.isNaN(Date.parse(r.expires_at))));
   if (!ok) return null;
   return {
     id: (r.id as string).toLowerCase(),
@@ -58,6 +61,7 @@ export function parseGameRow(value: unknown): FriendGame | null {
     version: r.version as number,
     endReason: r.end_reason as FriendGame["endReason"],
     winner: r.winner as Color | null,
+    expiresAt: typeof r.expires_at === "string" ? Date.parse(r.expires_at) : null,
   };
 }
 
@@ -94,10 +98,16 @@ export type Outcome =
   | { kind: "draw" }
   | { kind: "expired" };
 
-/** What the status line says, from the server's row (and the replayed position for check). */
-export function outcomeFor(game: FriendGame, seat: Color, ctl: GameController | null): Outcome {
+/**
+ * What the status line says, from the server's row (and the replayed
+ * position for check). An active game past its expires_at is shown as
+ * expired at once: the server already refuses its moves, even before the
+ * cleanup job (every 5 minutes) marks it expired.
+ */
+export function outcomeFor(game: FriendGame, seat: Color, ctl: GameController | null, now: number = Date.now()): Outcome {
   if (game.status === "waiting") return { kind: "waiting" };
   if (game.status === "expired") return { kind: "expired" };
+  if (game.status === "active" && game.expiresAt !== null && game.expiresAt <= now) return { kind: "expired" };
   if (game.status === "finished") {
     if (game.endReason === "checkmate") return game.winner === seat ? { kind: "win" } : { kind: "loss" };
     return { kind: "draw" };
@@ -107,9 +117,20 @@ export function outcomeFor(game: FriendGame, seat: Color, ctl: GameController | 
 }
 
 /** Whether the person may touch the board now. */
-export function canMove(game: FriendGame, seat: Color, ctl: GameController | null, sending: boolean): boolean {
-  const o = outcomeFor(game, seat, ctl);
+export function canMove(game: FriendGame, seat: Color, ctl: GameController | null, sending: boolean, now: number = Date.now()): boolean {
+  const o = outcomeFor(game, seat, ctl, now);
   return !sending && ctl !== null && o.kind === "playing" && o.myTurn;
+}
+
+/**
+ * Whether the other player has this game open, from the channel's presence
+ * state ({ key: [{ seat }] }, each player tracks only their own seat).
+ */
+export function opponentPresent(state: Record<string, unknown[]>, seat: Color): boolean {
+  const other = seat === "w" ? "b" : "w";
+  return Object.values(state).some((metas) =>
+    Array.isArray(metas) && metas.some((m) => typeof m === "object" && m !== null && (m as { seat?: unknown }).seat === other),
+  );
 }
 
 /** Squares in display order with the person's own pieces at the bottom. */

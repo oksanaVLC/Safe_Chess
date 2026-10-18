@@ -84,6 +84,12 @@ export interface Strings {
   gameUnavailable: string;
   /** Label before the game's code, e.g. "Code ABCD-EFGH". */
   gameCode: string;
+  /** The other player has closed the game (drafted in Step 4). */
+  friendLeft: string;
+  /** This browser's stored anonymous player could not be restored. */
+  sessionLost: string;
+  sessionLostHint: string;
+  startOver: string;
 
   // Brief §4
   robots: Record<Level, Robot>;
@@ -183,6 +189,10 @@ const en: Strings = {
   reconnecting: "Reconnecting…",
   gameUnavailable: "This game isn't available",
   gameCode: "Code",
+  friendLeft: "Your friend left the game",
+  sessionLost: "We couldn't reconnect you to your games",
+  sessionLostHint: "If you start again, your earlier games can't be continued",
+  startOver: "Start again",
 
   robots: {
     1: { name: "Snoozy", tagline: "Just woke up", vsName: "Snoozy" },
@@ -294,6 +304,10 @@ const es: Strings = {
   reconnecting: "Reconectando…",
   gameUnavailable: "Esta partida no está disponible",
   gameCode: "Código",
+  friendLeft: "Tu amigo ha salido de la partida",
+  sessionLost: "No hemos podido reconectarte con tus partidas",
+  sessionLostHint: "Si empiezas de nuevo, no podrás seguir tus partidas anteriores",
+  startOver: "Empezar de nuevo",
 
   robots: {
     1: { name: "Dormilón", tagline: "Recién despertado", vsName: "Dormilón" },
@@ -405,6 +419,10 @@ const ru: Strings = {
   reconnecting: "Переподключаемся…",
   gameUnavailable: "Эта игра недоступна",
   gameCode: "Код",
+  friendLeft: "Твой друг вышел из игры",
+  sessionLost: "Не удалось вернуть тебя к твоим партиям",
+  sessionLostHint: "Если начать заново, прежние партии продолжить не получится",
+  startOver: "Начать заново",
 
   robots: {
     1: { name: "Соня", tagline: "Только проснулся", vsName: "Сони" },

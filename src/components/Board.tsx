@@ -14,7 +14,7 @@ type BoardProps =
       orientation?: Color;
     }
   /** Display-only board (Game moves screen), 37 px squares. */
-  | { squares: SquareView[]; onTap?: undefined; size: "mini"; label: string; orientation?: undefined };
+  | { squares: SquareView[]; onTap?: undefined; size: "mini"; label: string; orientation?: Color };
 
 export function Board(props: BoardProps) {
   const { t } = useLanguage();

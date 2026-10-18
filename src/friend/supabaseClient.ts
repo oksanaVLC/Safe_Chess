@@ -1,11 +1,13 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Color } from "chess.js";
 import { sharedSession, type SessionResult } from "./anonymousSession";
 import type { Rpc } from "./friendApi";
 import { classifyMoveResponse, parseGameRow, type MoveResult } from "./friendGame";
 import type { FetchResult } from "./gameSync";
 import { checkPublicConfig } from "./publicConfig";
+import { authStorageKey, browserStorage, guardSession, type KeyValueStorage } from "./sessionGuard";
 
 // The browser's Supabase client for Play with a friend. It only ever holds
 // the publishable key and the player's own anonymous session; every write
@@ -22,22 +24,84 @@ const config = checkPublicConfig(
 /** Whether this build can play with a friend at all. */
 export const friendModeConfigured = config.status === "ok";
 
-let client: SupabaseClient | null = null;
-let session: (() => Promise<SessionResult>) | null = null;
+export interface FriendClient {
+  client: SupabaseClient;
+  /** The player's anonymous session (calls at the same time share one lookup). */
+  session(): Promise<SessionResult>;
+  /**
+   * Explicit "start again" after "session_lost": creates a new anonymous
+   * user (once; concurrent or repeated calls share it). The old stored
+   * session is overwritten only when the new one is saved. Only ever called
+   * from a button.
+   */
+  startOver(): Promise<SessionResult>;
+}
+
+/**
+ * The client with its session guard. The guard is installed BEFORE the
+ * client is created, because supabase-js starts restoring (and may try to
+ * delete) the stored session as soon as it exists. The session key is the
+ * default one, so sessions stored by earlier versions are kept.
+ */
+export function createFriendClient(url: string, publishableKey: string, storage: KeyValueStorage, fetchImpl?: typeof fetch): FriendClient {
+  const sessionKey = authStorageKey(url);
+  const guard = guardSession(storage, sessionKey); // records whether a session was stored
+  const client = createClient(url, publishableKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storage: guard.storage,
+      storageKey: sessionKey,
+    },
+    ...(fetchImpl ? { global: { fetch: fetchImpl } } : {}),
+  });
+  let allowCreate = !guard.hadStoredSession;
+  const policy = { mayCreate: () => allowCreate, lost: () => guard.blockedRemoval };
+  let lookup = sharedSession(client.auth, policy);
+  // One "start again" at a time; once it has worked, asking again returns
+  // the same new player instead of creating another one.
+  let starting: Promise<SessionResult> | null = null;
+  return {
+    client,
+    session: () => lookup(),
+    startOver: () => {
+      starting ??= (() => {
+        guard.startOver();
+        allowCreate = true;
+        lookup = sharedSession(client.auth, policy);
+        return lookup().then((result) => {
+          if (result.status !== "ok") starting = null; // a later, deliberate tap may try again
+          return result;
+        });
+      })();
+      return starting;
+    },
+  };
+}
+
+let friend: FriendClient | null = null;
+
+function friendClient(): FriendClient | null {
+  if (config.status !== "ok") return null;
+  friend ??= createFriendClient(config.url, config.publishableKey, browserStorage());
+  return friend;
+}
 
 /** The shared client, or null when this build has no (valid) Supabase settings. */
 export function getSupabase(): SupabaseClient | null {
-  if (config.status !== "ok") return null;
-  client ??= createClient(config.url, config.publishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
-  });
-  return client;
+  return friendClient()?.client ?? null;
 }
 
 /** The player's anonymous session (shared by every caller on this page). */
 export function friendSession(supabase: SupabaseClient): Promise<SessionResult> {
-  session ??= sharedSession(supabase.auth);
-  return session();
+  const f = friendClient();
+  return f && f.client === supabase ? f.session() : Promise.resolve({ status: "error" });
+}
+
+/** "Start again" after a lost session: a new anonymous player in this browser. */
+export function startOverSession(): Promise<SessionResult> {
+  return friendClient()?.startOver() ?? Promise.resolve({ status: "error" });
 }
 
 /** supabase.rpc as the plain function friendApi expects. */
@@ -84,17 +148,30 @@ export async function sendMove(
   }
 }
 
+/** Presence on the game channel: who has the game open. */
+export interface GamePresence {
+  /** This player's id: one presence entry per player, whatever the tabs. */
+  key: string;
+  seat: Color;
+  onChange: (state: Record<string, unknown[]>) => void;
+}
+
 /**
  * Joins the private channel game:<id>. Only the two players may receive
  * on it (policy game_channel_receive); its events carry no game data.
+ * With `presence`, the player also announces their seat (the only thing a
+ * player may send there: policy game_channel_presence_only).
  */
 export function subscribeToGame(
   supabase: SupabaseClient,
   gameId: string,
   onEvent: (payload: unknown) => void,
   onStatus: (status: string) => void,
+  presence?: GamePresence,
 ): () => void {
-  const channel = supabase.channel(`game:${gameId}`, { config: { private: true } });
+  const channel = supabase.channel(`game:${gameId}`, {
+    config: presence ? { private: true, presence: { key: presence.key } } : { private: true },
+  });
   let left = false;
   void supabase.auth
     .getSession()
@@ -102,7 +179,12 @@ export function subscribeToGame(
     .catch(() => undefined)
     .then(() => {
       if (left) return;
-      channel.on("broadcast", { event: "*" }, (message) => onEvent(message.payload)).subscribe((status) => onStatus(status));
+      channel.on("broadcast", { event: "*" }, (message) => onEvent(message.payload));
+      if (presence) channel.on("presence", { event: "sync" }, () => presence.onChange(channel.presenceState()));
+      channel.subscribe((status) => {
+        if (presence && status === "SUBSCRIBED") void channel.track({ seat: presence.seat }).catch(() => undefined);
+        onStatus(status);
+      });
     });
   return () => {
     left = true;

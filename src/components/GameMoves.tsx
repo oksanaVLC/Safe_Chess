@@ -15,13 +15,15 @@ interface GameMovesProps {
   /** e.g. "You vs Gizmo · Level 3" */
   subtitle: string;
   onBack: () => void;
+  /** The side at the bottom of the mini board (default White). */
+  orientation?: "w" | "b";
 }
 
 /**
  * Game moves screen: the list of moves, a mini board showing the position
  * at the selected move, and buttons to step through the game.
  */
-export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
+export function GameMoves({ history, subtitle, onBack, orientation }: GameMovesProps) {
   const { t } = useLanguage();
   const entries = toEntries(history);
   const rows = toRows(entries);
@@ -85,7 +87,8 @@ export function GameMoves({ history, subtitle, onBack }: GameMovesProps) {
 
       <Board
         size="mini"
-        squares={positionSquares(fen, lastMove)}
+        squares={orientation === "b" ? positionSquares(fen, lastMove).reverse() : positionSquares(fen, lastMove)}
+        orientation={orientation}
         label={ply === 0 ? t.boardAtStart : t.boardAfterMove(moveNumber)}
       />
 

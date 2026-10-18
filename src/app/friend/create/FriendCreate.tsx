@@ -12,9 +12,11 @@ import {
   getSupabase,
   readGame,
   rpcOf,
+  startOverSession,
   subscribeToGame,
 } from "@/friend/supabaseClient";
 import { useLanguage } from "@/i18n/language";
+import { SessionLost } from "../SessionLost";
 import styles from "./FriendCreate.module.css";
 
 // Play with a friend, creator's screen: the QR code and the typed code for
@@ -27,6 +29,7 @@ type State =
   | { kind: "loading" }
   | { kind: "unavailable" }
   | { kind: "error" }
+  | { kind: "lost" } // the stored player could not be restored
   | { kind: "ready"; gameId: string; code: string; link: string };
 
 export function FriendCreate() {
@@ -75,6 +78,7 @@ export function FriendCreate() {
     if (!supabase) return setState({ kind: "unavailable" });
     setState({ kind: "loading" });
     const session = await friendSession(supabase);
+    if (session.status === "session_lost") return setState({ kind: "lost" });
     if (session.status !== "ok") return setState({ kind: "error" });
     // safe to repeat: a waiting game comes back as "existing", never twice
     const game = await createFriendGame(rpcOf(supabase));
@@ -158,6 +162,14 @@ export function FriendCreate() {
         <p className={styles.waiting} role="status">
           <span className={styles.dot} aria-hidden />…
         </p>
+      ) : state.kind === "lost" ? (
+        <SessionLost
+          onStartOver={async () => {
+            const fresh = await startOverSession(); // the person chose a new player
+            if (fresh.status === "ok") await create();
+            else setState({ kind: "error" });
+          }}
+        />
       ) : (
         <div className={styles.problem} role="alert">
           <p className={styles.problemText}>{state.kind === "unavailable" ? t.friendUnavailable : t.friendError}</p>

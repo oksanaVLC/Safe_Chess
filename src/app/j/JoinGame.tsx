@@ -6,8 +6,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BackIcon } from "@/components/icons";
 import { displayJoinCode, joinFriendGame, type JoinResult } from "@/friend/friendApi";
 import { isJoinCode, normalizeJoinCode } from "@/friend/joinCode";
-import { friendModeConfigured, friendSession, getSupabase, rpcOf } from "@/friend/supabaseClient";
+import { friendModeConfigured, friendSession, getSupabase, rpcOf, startOverSession } from "@/friend/supabaseClient";
 import { useLanguage } from "@/i18n/language";
+import { SessionLost } from "../friend/SessionLost";
 import styles from "./JoinGame.module.css";
 
 // Joining a friend's game, from the QR code, the shared link or the code
@@ -18,6 +19,7 @@ import styles from "./JoinGame.module.css";
 type State =
   | { kind: "loading" }
   | { kind: "unavailable" } // this build has no Supabase settings
+  | { kind: "lost"; code: string } // the stored player could not be restored
   | { kind: "result"; result: JoinResult; code: string };
 
 export function JoinGame() {
@@ -31,6 +33,7 @@ export function JoinGame() {
     if (!supabase) return setState({ kind: "unavailable" });
     setState({ kind: "loading" });
     const session = await friendSession(supabase);
+    if (session.status === "session_lost") return setState({ kind: "lost", code });
     if (session.status !== "ok") return setState({ kind: "result", result: { status: "error" }, code });
     // safe to repeat: a player already seated gets "ok" with the same game
     const result = await joinFriendGame(rpcOf(supabase), code);
@@ -81,6 +84,14 @@ export function JoinGame() {
         <p className={styles.message} role="alert">
           {t.friendUnavailable}
         </p>
+      ) : state.kind === "lost" ? (
+        <SessionLost
+          onStartOver={async () => {
+            const fresh = await startOverSession(); // the person chose a new player
+            if (fresh.status === "ok") await join(state.code);
+            else setState({ kind: "result", result: { status: "error" }, code: state.code });
+          }}
+        />
       ) : (
         <>
           {isJoinCode(state.code) && <p className={styles.code}>{displayJoinCode(state.code)}</p>}
