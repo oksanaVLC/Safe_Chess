@@ -42,3 +42,8 @@ next-env.d.ts
 
 # supabase cli (linked project metadata)
 supabase/.temp/
+
+# local briefs, design files and scratch SQL (not part of the app)
+SAFE_CHESS*.md
+Safe_Chess_Design.pdf
+/scratchpad/
