@@ -59,3 +59,11 @@ body {
 button {
   font-family: inherit;
 }
+
+/* On wide screens every screen stays a phone-sized column in the middle,
+   so buttons and cards are not stretched across the whole window. */
+main {
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+}

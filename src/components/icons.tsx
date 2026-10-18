@@ -31,6 +31,28 @@ export function RobotIcon({ size = 30 }: IconProps) {
   );
 }
 
+export function ClockIcon({ size = 30 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2.2}>
+      <circle cx="12" cy="13.5" r="7.5" />
+      <path d="M12 13.5V10M12 13.5l2.5 2" />
+      <path d="M10 3h4M12 3v3" />
+      <path d="M18.5 6.5l1.5-1.5" />
+    </svg>
+  );
+}
+
+export function QrIcon({ size = 30 }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} strokeWidth={2.2}>
+      <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.5" />
+      <path d="M14 14h2.5v2.5M20.5 14v6.5H17M14 18.5v2" />
+    </svg>
+  );
+}
+
 export function UndoIcon({ size = 28 }: IconProps) {
   return (
     <svg {...base} width={size} height={size} strokeWidth={2.4}>

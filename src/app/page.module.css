@@ -1,34 +1,159 @@
 .screen {
   min-height: 100dvh;
-  padding: 20px 16px 24px;
+  padding: 20px 16px 28px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+}
+
+/* Logo, name and tagline */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.logo {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  margin-bottom: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  display: grid;
+  place-items: center;
+}
+
+/* the dashed ring of the design */
+.logo::after {
+  content: "";
+  position: absolute;
+  inset: 13px;
+  border-radius: 50%;
+  border: 3px dashed rgba(44, 46, 72, 0.25);
+}
+
+.knight {
+  font-size: 96px;
+  line-height: 1;
 }
 
 .title {
   margin: 0;
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 900;
+  line-height: 1.1;
 }
 
-.button {
-  height: 90px;
+.tagline {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* The three ways to play */
+.modes {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 6px; /* room for the 3D shadow */
+}
+
+.card {
+  min-height: 84px;
+  padding: 12px 16px;
   border-radius: 26px;
-  background: var(--green);
-  box-shadow: 0 5px 0 var(--green-dark);
-  color: var(--navy);
-  font-size: 22px;
-  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 16px;
   text-decoration: none;
+  touch-action: manipulation;
+}
+
+.card:active {
+  transform: translateY(3px);
+}
+
+.tile {
+  flex: none;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Play with a friend: the navy card of the Home design */
-.buttonFriend {
+.text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.cardSub {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Play with a robot: green card, navy tile */
+.robot {
+  background: var(--green);
+  box-shadow: 0 5px 0 var(--green-dark);
+  color: var(--navy);
+}
+
+.robot .tile {
+  background: var(--navy);
+  color: var(--white);
+}
+
+/* Robot with a clock: white card with a green edge, green tile */
+.timed {
+  padding: 9px 13px; /* the 3px edge keeps the card as tall as the others */
+  background: var(--white);
+  border: 3px solid var(--green);
+  box-shadow: 0 5px 0 var(--green);
+  color: var(--navy);
+}
+
+.timed .tile {
+  background: var(--green);
+  color: var(--navy);
+}
+
+/* Play with a friend: navy card, green tile */
+.friend {
   background: var(--navy);
   box-shadow: 0 5px 0 var(--navy-dark);
   color: var(--white);
+}
+
+.friend .tile {
+  background: var(--green);
+  color: var(--navy);
+}
+
+.friend .cardSub {
+  opacity: 0.85;
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:active {
+    transform: none;
+  }
 }
